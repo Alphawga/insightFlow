@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const domain = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXTAUTH_URL;
 
 interface EmailPayload {
   to: string;
@@ -12,7 +13,7 @@ export async function sendEmail(payload: EmailPayload) {
   const { to, subject, html } = payload;
 
   return await resend.emails.send({
-    from: 'InsightFlow Pro <noreply@insightflowpro.com>',
+    from: 'InsightFlow Pro <onboarding@resend.dev>',
     to,
     subject,
     html,
@@ -20,11 +21,11 @@ export async function sendEmail(payload: EmailPayload) {
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const confirmLink = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}`;
+  const confirmLink = `${domain}/auth/verify-email?token=${token}`;
 
   try {
     await resend.emails.send({
-      from: 'InsightFlow Pro <noreply@insightflowpro.com>',
+      from: 'InsightFlow Pro <onboarding@resend.dev>',
       to: email,
       subject: 'Verify your email address',
       html: `
@@ -42,11 +43,11 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`;
+  const resetLink = `${domain}/auth/reset-password?token=${token}`;
 
   try {
     await resend.emails.send({
-      from: 'InsightFlow Pro <noreply@insightflowpro.com>',
+      from: 'InsightFlow Pro <onboarding@resend.dev>',
       to: email,
       subject: 'Reset your password',
       html: `
