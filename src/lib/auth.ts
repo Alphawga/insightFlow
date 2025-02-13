@@ -96,7 +96,6 @@ export const authOptions: NextAuthOptions = {
 export async function createUser(email: string, password: string, name?: string) {
   const hashedPassword = await hash(password, 12);
   const verificationToken = randomBytes(32).toString("hex");
-  const hashedToken = await hash(verificationToken, 12);
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   const user = await db.user.create({
@@ -110,7 +109,7 @@ export async function createUser(email: string, password: string, name?: string)
   await db.verificationToken.create({
     data: {
       identifier: email,
-      token: hashedToken,
+      token: verificationToken,
       expires,
     },
   });
@@ -121,38 +120,52 @@ export async function createUser(email: string, password: string, name?: string)
 }
 
 export async function verifyEmail(token: string) {
-  const hashedToken = await hash(token, 12);
-  
+  if (!token) {
+    throw new Error("Verification token is required");
+  }
+
   const verificationToken = await db.verificationToken.findFirst({
     where: {
-      token: hashedToken,
+      token: token,
       expires: {
         gt: new Date(),
       },
     },
   });
 
+  console.log("Verification attempt for token:", token);
+  console.log("Found verification token:", verificationToken);
+
   if (!verificationToken) {
     throw new Error("Invalid or expired verification token");
   }
 
-  await db.user.update({
-    where: {
-      email: verificationToken.identifier,
-    },
-    data: {
-      emailVerified: new Date(),
-    },
-  });
-
-  await db.verificationToken.delete({
-    where: {
-      identifier_token: {
-        identifier: verificationToken.identifier,
-        token: hashedToken,
+  try {
+    // Update the user's email verification status
+    await db.user.update({
+      where: {
+        email: verificationToken.identifier,
       },
-    },
-  });
+      data: {
+        emailVerified: new Date(),
+      },
+    });
+
+    // Delete the verification token
+    await db.verificationToken.delete({
+      where: {
+        identifier_token: {
+          identifier: verificationToken.identifier,
+          token: token,
+        },
+      },
+    });
+
+    console.log("Successfully verified email for:", verificationToken.identifier);
+  } catch (error) {
+    console.error("Error during verification process:", error);
+    throw new Error("Failed to verify email. Please try again or contact support.");
+  }
 }
 
 export async function resetPassword(email: string) {
@@ -166,13 +179,12 @@ export async function resetPassword(email: string) {
   }
 
   const resetToken = randomBytes(32).toString("hex");
-  const hashedToken = await hash(resetToken, 12);
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   await db.verificationToken.create({
     data: {
       identifier: email,
-      token: hashedToken,
+      token: resetToken,
       expires,
     },
   });
@@ -181,11 +193,9 @@ export async function resetPassword(email: string) {
 }
 
 export async function updatePassword(token: string, newPassword: string) {
-  const hashedToken = await hash(token, 12);
-  
   const verificationToken = await db.verificationToken.findFirst({
     where: {
-      token: hashedToken,
+      token: token,
       expires: {
         gt: new Date(),
       },
@@ -211,7 +221,7 @@ export async function updatePassword(token: string, newPassword: string) {
     where: {
       identifier_token: {
         identifier: verificationToken.identifier,
-        token: hashedToken,
+        token: token,
       },
     },
   });

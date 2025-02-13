@@ -20,8 +20,9 @@ export default async function VerifyEmailPage({ searchParams }: PageProps) {
 
   try {
     await verifyEmail(token);
-    redirect("/auth/login?verified=true");
+  
   } catch (error) {
+    console.error("Verification error:", error);
     return (
       <div className="container flex h-screen w-screen flex-col items-center justify-center">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
@@ -30,11 +31,13 @@ export default async function VerifyEmailPage({ searchParams }: PageProps) {
               Email Verification Failed
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              The verification link is invalid or has expired. Please try again or contact support.
+              {error instanceof Error ? error.message : "The verification link is invalid or has expired. Please try again or contact support."}
             </p>
           </div>
         </div>
       </div>
     );
   }
+  
+  redirect("/auth/login?verified=true");
 } 
