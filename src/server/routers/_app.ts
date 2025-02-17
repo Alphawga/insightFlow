@@ -1,11 +1,12 @@
 import { router } from '../trpc';
 import * as auth from '../modules/auth';
 import * as googleAds from '../modules/google-ads';
+import * as workspace from '../modules/workspace';
 
 export const appRouter = router({
     ...auth,
     ...googleAds,
-
+    ...workspace,
 });
 
 // Export type router type signature,

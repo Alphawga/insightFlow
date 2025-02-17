@@ -1,7 +1,52 @@
 import { GoogleAdsClient } from '../utils/google-ads-client';
-import { prisma } from '../prisma';
 import { CAMPAIGN_FIELDS, DEVICE_SEGMENT, METRIC_FIELDS } from '../constants/google-ads';
-import { AdAccount, Campaign } from '@prisma/client';
+import { AdAccount } from '@prisma/client';
+import { db } from '../db';
+
+interface GoogleAdsCustomer {
+  descriptiveName: string;
+  id: string;
+}
+
+interface GoogleAdsCampaign {
+  id: string;
+  name: string;
+  status: string;
+  start_date?: string;
+  end_date?: string;
+  campaign_budget?: {
+    amount_micros: string;
+  };
+}
+
+interface GoogleAdsMetrics {
+  impressions: string;
+  clicks: string;
+  cost_micros: string;
+  conversions: string;
+  conversions_value: string;
+  ctr: string;
+  average_cpc: string;
+  roas: string;
+}
+
+interface GoogleAdsConversionAction {
+  id: string;
+  name: string;
+  status: string;
+  category: string;
+  type: string;
+}
+
+interface GoogleAdsResponse {
+  campaign?: GoogleAdsCampaign;
+  metrics?: GoogleAdsMetrics;
+  segments?: {
+    device: string;
+    date: string;
+  };
+  conversion_action?: GoogleAdsConversionAction;
+}
 
 export class GoogleAdsService {
   private static instance: GoogleAdsService;
@@ -24,18 +69,24 @@ export class GoogleAdsService {
       const client = await googleAdsClient.getClient(refresh_token);
 
       // Get customer account info
-      const customers = await client.listAccessibleCustomers();
+      const { resource_names: resourceNames } = await client.listAccessibleCustomers(
+        process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID!
+      );
       
-      if (!customers.length) {
+      if (!resourceNames?.length) {
         throw new Error('No accessible Google Ads accounts found');
       }
 
       // Create AdAccount records for each accessible account
       const accounts = await Promise.all(
-        customers.map(async (customerId) => {
-          const customer = await client.getCustomer(customerId);
+        resourceNames.map(async (resourceName: string) => {
+          const customerId = resourceName.split('/').pop() || '';
+          const customer = await client.Customer({ 
+            customer_id: customerId,
+            refresh_token: refresh_token
+          }) as unknown as GoogleAdsCustomer;
           
-          return prisma.adAccount.create({
+          return db.adAccount.create({
             data: {
               workspaceId,
               platform: 'GOOGLE_ADS',
@@ -65,7 +116,7 @@ export class GoogleAdsService {
   }
 
   public async syncAccountData(adAccountId: string) {
-    const account = await prisma.adAccount.findUnique({
+    const account = await db.adAccount.findUnique({
       where: { id: adAccountId },
     });
 
@@ -74,7 +125,7 @@ export class GoogleAdsService {
     }
 
     try {
-      await prisma.adAccount.update({
+      await db.adAccount.update({
         where: { id: adAccountId },
         data: { syncStatus: 'SYNCING' },
       });
@@ -85,7 +136,7 @@ export class GoogleAdsService {
         this.syncConversionActions(account),
       ]);
 
-      await prisma.adAccount.update({
+      await db.adAccount.update({
         where: { id: adAccountId },
         data: {
           syncStatus: 'SUCCESS',
@@ -93,7 +144,7 @@ export class GoogleAdsService {
         },
       });
     } catch (error) {
-      await prisma.adAccount.update({
+      await db.adAccount.update({
         where: { id: adAccountId },
         data: {
           syncStatus: 'ERROR',
@@ -106,7 +157,10 @@ export class GoogleAdsService {
 
   private async syncCampaigns(account: AdAccount) {
     const client = await GoogleAdsClient.getInstance().getClient(account.refreshToken!);
-    const customer = client.getCustomer(account.accountId);
+    const customer = client.Customer({ 
+      customer_id: account.accountId,
+      refresh_token: account.refreshToken!
+    });
 
     const query = `
       SELECT 
@@ -115,47 +169,58 @@ export class GoogleAdsService {
       WHERE campaign.status != 'REMOVED'
     `;
 
-    const response = await customer.query(query);
+    const response = await customer.query<GoogleAdsResponse[]>(query);
 
     // Process and store campaigns
     await Promise.all(
-      response.map(async (row) => {
-        const campaign = row.campaign;
-        return prisma.campaign.upsert({
-          where: {
-            adAccountId_externalId: {
-              adAccountId: account.id,
-              externalId: campaign.id.toString(),
+      response.map(async (row: GoogleAdsResponse) => {
+        try {
+          if (!row.campaign) return;
+          
+          const campaign = row.campaign;
+          return db.campaign.upsert({
+            where: {
+              adAccountId_externalId: {
+                adAccountId: account.id,
+                externalId: campaign.id,
+              },
             },
-          },
-          create: {
-            adAccountId: account.id,
-            externalId: campaign.id.toString(),
-            name: campaign.name,
-            status: campaign.status,
-            budget: row.campaign_budget?.amount_micros
-              ? Number(row.campaign_budget.amount_micros) / 1_000_000
-              : null,
-            startDate: campaign.start_date ? new Date(campaign.start_date) : null,
-            endDate: campaign.end_date ? new Date(campaign.end_date) : null,
-          },
-          update: {
-            name: campaign.name,
-            status: campaign.status,
-            budget: row.campaign_budget?.amount_micros
-              ? Number(row.campaign_budget.amount_micros) / 1_000_000
-              : null,
-            startDate: campaign.start_date ? new Date(campaign.start_date) : null,
-            endDate: campaign.end_date ? new Date(campaign.end_date) : null,
-          },
-        });
+            create: {
+              adAccountId: account.id,
+              externalId: campaign.id,
+              name: campaign.name,
+              status: campaign.status,
+              budget: campaign.campaign_budget?.amount_micros
+                ? Number(campaign.campaign_budget.amount_micros) / 1_000_000
+                : null,
+              budgetType: 'DAILY',
+              startDate: campaign.start_date ? new Date(campaign.start_date) : null,
+              endDate: campaign.end_date ? new Date(campaign.end_date) : null,
+            },
+            update: {
+              name: campaign.name,
+              status: campaign.status,
+              budget: campaign.campaign_budget?.amount_micros
+                ? Number(campaign.campaign_budget.amount_micros) / 1_000_000
+                : null,
+              budgetType: 'DAILY',
+              startDate: campaign.start_date ? new Date(campaign.start_date) : null,
+              endDate: campaign.end_date ? new Date(campaign.end_date) : null,
+            },
+          });
+        } catch (error) {
+          console.error('Error processing campaign:', error);
+        }
       })
     );
   }
 
   private async syncMetrics(account: AdAccount) {
     const client = await GoogleAdsClient.getInstance().getClient(account.refreshToken!);
-    const customer = client.getCustomer(account.accountId);
+    const customer = client.Customer({ 
+      customer_id: account.accountId,
+      refresh_token: account.refreshToken!
+    });
 
     const query = `
       SELECT 
@@ -168,64 +233,73 @@ export class GoogleAdsService {
         AND segments.date DURING LAST_30_DAYS
     `;
 
-    const response = await customer.query(query);
+    const response = await customer.query<GoogleAdsResponse[]>(query);
 
     // Process and store metrics
     await Promise.all(
-      response.map(async (row) => {
-        const metrics = row.metrics;
-        const device = row.segments.device;
-        const campaignId = row.campaign.id.toString();
+      response.map(async (row: GoogleAdsResponse) => {
+        try {
+          if (!row.campaign || !row.metrics || !row.segments) return;
 
-        // Find the campaign
-        const campaign = await prisma.campaign.findUnique({
-          where: {
-            adAccountId_externalId: {
-              adAccountId: account.id,
-              externalId: campaignId,
+          const metrics = row.metrics;
+          const device = row.segments.device;
+          const campaignId = row.campaign.id;
+
+          // Find the campaign
+          const campaign = await db.campaign.findUnique({
+            where: {
+              adAccountId_externalId: {
+                adAccountId: account.id,
+                externalId: campaignId,
+              },
             },
-          },
-        });
+          });
 
-        if (!campaign) return;
+          if (!campaign) return;
 
-        // Store device-specific metrics
-        await prisma.deviceMetrics.create({
-          data: {
-            campaignId: campaign.id,
-            date: new Date(row.segments.date),
-            device: device,
-            impressions: Number(metrics.impressions),
-            clicks: Number(metrics.clicks),
-            cost: Number(metrics.cost_micros) / 1_000_000,
-            conversions: Number(metrics.conversions),
-            conversionValue: Number(metrics.conversions_value),
-          },
-        });
+          // Store device-specific metrics
+          await db.deviceMetrics.create({
+            data: {
+              campaignId: campaign.id,
+              date: new Date(row.segments.date),
+              device: device,
+              impressions: Number(metrics.impressions),
+              clicks: Number(metrics.clicks),
+              cost: Number(metrics.cost_micros) / 1_000_000,
+              conversions: Number(metrics.conversions),
+              conversionValue: Number(metrics.conversions_value),
+            },
+          });
 
-        // Store campaign-level metrics
-        await prisma.adMetrics.create({
-          data: {
-            adAccountId: account.id,
-            campaignId: campaign.id,
-            date: new Date(row.segments.date),
-            impressions: Number(metrics.impressions),
-            clicks: Number(metrics.clicks),
-            cost: Number(metrics.cost_micros) / 1_000_000,
-            conversions: Number(metrics.conversions),
-            conversionValue: Number(metrics.conversions_value),
-            ctr: Number(metrics.ctr),
-            cpc: Number(metrics.average_cpc) / 1_000_000,
-            roas: Number(metrics.roas),
-          },
-        });
+          // Store campaign-level metrics
+          await db.adMetrics.create({
+            data: {
+              adAccountId: account.id,
+              campaignId: campaign.id,
+              date: new Date(row.segments.date),
+              impressions: Number(metrics.impressions),
+              clicks: Number(metrics.clicks),
+              cost: Number(metrics.cost_micros) / 1_000_000,
+              conversions: Number(metrics.conversions),
+              conversionValue: Number(metrics.conversions_value),
+              ctr: Number(metrics.ctr) || 0,
+              cpc: Number(metrics.average_cpc) / 1_000_000 || 0,
+              roas: Number(metrics.roas) || 0,
+            },
+          });
+        } catch (error) {
+          console.error('Error processing metrics:', error);
+        }
       })
     );
   }
 
   private async syncConversionActions(account: AdAccount) {
     const client = await GoogleAdsClient.getInstance().getClient(account.refreshToken!);
-    const customer = client.getCustomer(account.accountId);
+    const customer = client.Customer({ 
+      customer_id: account.accountId,
+      refresh_token: account.refreshToken!
+    });
 
     const query = `
       SELECT 
@@ -237,22 +311,24 @@ export class GoogleAdsService {
       FROM conversion_action
     `;
 
-    const response = await customer.query(query);
+    const response = await customer.query<GoogleAdsResponse[]>(query);
 
     // Process and store conversion actions
     await Promise.all(
-      response.map(async (row) => {
+      response.map(async (row: GoogleAdsResponse) => {
+        if (!row.conversion_action) return;
+
         const conversion = row.conversion_action;
-        return prisma.conversionAction.upsert({
+        return db.conversionAction.upsert({
           where: {
             adAccountId_externalId: {
               adAccountId: account.id,
-              externalId: conversion.id.toString(),
+              externalId: conversion.id,
             },
           },
           create: {
             adAccountId: account.id,
-            externalId: conversion.id.toString(),
+            externalId: conversion.id,
             name: conversion.name,
             category: conversion.category,
             status: conversion.status,

@@ -110,6 +110,7 @@ export function AuthForm({ className, type, ...props }: AuthFormProps) {
           return;
         }
 
+        // After successful login, let the dashboard handle the redirect
         router.push("/dashboard");
       } else if (type === "register") {
         const registerData = data as z.infer<typeof registerUserSchema>;

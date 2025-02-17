@@ -5,6 +5,11 @@ import {
   SunMedium,
   Twitter,
   type Icon as LucideIcon,
+  LayoutDashboard,
+  Megaphone,
+  LineChart,
+  FileText,
+  Menu,
 } from "lucide-react"
 
 export type Icon = typeof LucideIcon
@@ -31,4 +36,14 @@ export const Icons = {
       ></path>
     </svg>
   ),
+  logo: () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+      {/* Your logo SVG path here */}
+    </svg>
+  ),
+  layoutDashboard: LayoutDashboard,
+  megaphone: Megaphone,
+  lineChart: LineChart,
+  fileText: FileText,
+  menu: Menu,
 } 

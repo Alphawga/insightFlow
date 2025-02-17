@@ -1,14 +1,13 @@
-import '@/app/globals.css';
+import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import TRPCProvider from '@/app/_providers/trpc-provider';
-import { SessionProvider } from 'next-auth/react';
-import SessionWrapper from '@/components/auth/session-wrapper';
+import './globals.css';
+import Providers from './_providers/providers';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'InsightFlow Pro',
-  description: 'Unified Analytics Dashboard for E-commerce',
+  description: 'Analytics & Insights Platform',
 };
 
 export default function RootLayout({
@@ -19,11 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SessionProvider>
-          <TRPCProvider>
-            <SessionWrapper>{children}</SessionWrapper>
-          </TRPCProvider>
-        </SessionProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

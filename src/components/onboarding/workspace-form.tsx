@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { api } from '@/lib/trpc/client';
+import { trpc } from '@/app/_providers/trpc-provider';
 
 interface WorkspaceFormProps {
   onComplete: () => void;
@@ -12,7 +12,7 @@ export function WorkspaceForm({ onComplete }: WorkspaceFormProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
-  const createWorkspace = api.workspace.create.useMutation({
+  const createWorkspace = trpc.create.useMutation({
     onSuccess: (workspace) => {
       // Store workspace ID for Google Ads connection
       localStorage.setItem('onboarding_workspace_id', workspace.id);
