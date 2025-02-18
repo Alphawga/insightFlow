@@ -10,6 +10,13 @@ import {
   LineChart,
   FileText,
   Menu,
+  MoreVertical,
+  X,
+  Plus,
+  ArrowRight,
+  Target,
+  Lightbulb,
+  Users,
 } from "lucide-react"
 
 export type Icon = typeof LucideIcon
@@ -46,4 +53,11 @@ export const Icons = {
   lineChart: LineChart,
   fileText: FileText,
   menu: Menu,
+  moreVertical: MoreVertical,
+  x: X,
+  plus: Plus,
+  arrowRight: ArrowRight,
+  target: Target,
+  lightbulb: Lightbulb,
+  users: Users,
 } 

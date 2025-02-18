@@ -35,7 +35,8 @@ export function ConversionSelector({ onComplete }: ConversionSelectorProps) {
 
   const setPrimaryConversion = api.setPrimaryConversion.useMutation({
     onSuccess: () => {
-      onComplete();
+      // Move to tutorial step
+      window.location.href = '/onboarding?step=tutorial';
     },
     onError: (error) => {
       setError(error.message);

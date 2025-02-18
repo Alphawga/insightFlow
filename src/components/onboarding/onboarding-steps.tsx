@@ -10,6 +10,7 @@ import { ConversionSelector } from './conversion-selector';
 import { useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { TutorialSteps } from './tutorial-steps';
 
 const STEPS = [
   {
@@ -31,6 +32,11 @@ const STEPS = [
     id: 'conversion',
     title: 'Select Key Conversions',
     description: 'Choose which conversion actions are most important for your business.',
+  },
+  {
+    id: 'tutorial',
+    title: 'Quick Tour',
+    description: "Let's take a quick tour of your dashboard and key features.",
   },
   {
     id: 'complete',
@@ -119,6 +125,15 @@ export function OnboardingSteps() {
             <h2 className="text-2xl font-bold">{step.title}</h2>
             <p className="text-muted-foreground">{step.description}</p>
             <ConversionSelector onComplete={() => setCurrentStep(4)} />
+          </div>
+        );
+
+      case 'tutorial':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">{step.title}</h2>
+            <p className="text-muted-foreground">{step.description}</p>
+            <TutorialSteps />
           </div>
         );
 
