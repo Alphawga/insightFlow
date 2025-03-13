@@ -139,10 +139,20 @@ export function AuthForm({ className, type, ...props }: AuthFormProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsGoogleLoading(true);
-      await signIn("google", { callbackUrl: "/dashboard" });
+      setError("");
+      
+      const result = await signIn("google", {
+        redirect: true,
+        callbackUrl: "/dashboard"
+      });
+
+      // Note: This code won't execute for successful sign-ins due to the redirect
+      if (result?.error) {
+        setError("Failed to sign in with Google");
+        setIsGoogleLoading(false);
+      }
     } catch (error) {
-      setError("An error occurred with Google sign in");
-    } finally {
+      setError("An unexpected error occurred");
       setIsGoogleLoading(false);
     }
   };

@@ -22,6 +22,7 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/auth/login",
@@ -32,8 +33,14 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "select_account",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
-
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -51,7 +58,7 @@ export const authOptions: NextAuthOptions = {
           }
         });
 
-        if (!user) {
+        if (!user || !user.password) {
           return null;
         }
 
@@ -73,25 +80,81 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        if (!user.email) {
+          return false;
+        }
+        // Check if user exists
+        const existingUser = await db.user.findUnique({
+          where: { email: user.email }
+        });
+
+        if (!existingUser) {
+          // Create new user if they don't exist
+          await db.user.create({
+            data: {
+              email: user.email,
+              name: user.name,
+              emailVerified: new Date(), // Google accounts are pre-verified
+              image: user.image
+            }
+          });
+        }
+        return true;
+      }
+
+      // For credentials, check email verification
+      if (account?.provider === "credentials") {
+        const dbUser = await db.user.findUnique({
+          where: { email: user.email! }
+        });
+        return !!(dbUser?.emailVerified);
+      }
+
+      return true;
+    },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.name = token.name;
-        session.user.email = token.email;
+      if (session.user) {
+        session.user.id = token.sub!;
+        // Add additional user data if needed
+        const user = await db.user.findUnique({
+          where: { id: token.sub }
+        });
+        if (user) {
+          session.user.name = user.name;
+          session.user.email = user.email;
+          session.user.image = user.image;
+        }
       }
       return session;
     },
     async jwt({ token, user, account, profile }) {
       if (user) {
-        token.id = user.id;
+        token.sub = user.id;
       }
       if (account) {
-        token.accessToken = account.access_token;
+        token.provider = account.provider;
       }
       return token;
-    },
+    }
   },
-}; 
+  events: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        // Update user data on each sign in to keep it in sync with Google
+        await db.user.update({
+          where: { email: user.email! },
+          data: {
+            name: user.name,
+            image: user.image
+          }
+        });
+      }
+    }
+  },
+  debug: process.env.NODE_ENV === "development"
+};
 
 export async function createUser(email: string, password: string, name?: string) {
   const hashedPassword = await hash(password, 12);
