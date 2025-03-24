@@ -5,6 +5,7 @@ import * as googleAds from '../modules/google-ads';
 import * as dashboard from '../modules/dashboard'
 import * as campaigns from '../modules/campaigns'
 import * as adGroups from '../modules/ad-groups'
+import * as onboarding from '../modules/onboarding';
 
 
 export const appRouter = router({
@@ -14,6 +15,7 @@ export const appRouter = router({
     ...dashboard,
     ...campaigns,
     ...adGroups,
+    ...onboarding,
 });
 
 // Export type router type signature,

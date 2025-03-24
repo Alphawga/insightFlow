@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Reset Password | InsightFlow Pro",
-  description: "Reset your InsightFlow Pro account password",
+  title: "Reset Password | InsightFlow",
+  description: "Reset your InsightFlow account password",
 };
 
 import { AuthForm } from "@/components/auth/auth-form";

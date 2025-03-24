@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -7,8 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { api } from '@/lib/trpc/client';
-import { Loader2 } from 'lucide-react';
+import { trpc } from '@/app/_providers/trpc-provider';
 
 interface ConversionSelectorProps {
   onComplete: () => void;
@@ -18,25 +19,23 @@ export function ConversionSelector({ onComplete }: ConversionSelectorProps) {
   const [selectedConversion, setSelectedConversion] = useState('');
   const [error, setError] = useState('');
 
-  // Get the workspace ID we stored during workspace creation
+
   const workspaceId = localStorage.getItem('onboarding_workspace_id');
 
-  // Get the connected ad account
-  const { data: adAccount, isLoading: isLoadingAccount } = api.getConnectedAccount.useQuery(
+
+  const { data: adAccount, isLoading: isLoadingAccount } = trpc.getConnectedAccount.useQuery(
     { workspaceId: workspaceId! },
     { enabled: !!workspaceId }
   );
 
-  // Get conversion actions for the account
-  const { data: conversionActions, isLoading: isLoadingConversions } = api.getConversionActions.useQuery(
+  const { data: conversionActions, isLoading: isLoadingConversions } = trpc.getConversionActions.useQuery(
     { adAccountId: adAccount?.id! },
     { enabled: !!adAccount?.id }
   );
 
-  const setPrimaryConversion = api.setPrimaryConversion.useMutation({
+  const setPrimaryConversion = trpc.setPrimaryConversion.useMutation({
     onSuccess: () => {
-      // Move to tutorial step
-      window.location.href = '/onboarding?step=tutorial';
+      onComplete();
     },
     onError: (error) => {
       setError(error.message);
@@ -59,28 +58,45 @@ export function ConversionSelector({ onComplete }: ConversionSelectorProps) {
 
   if (isLoadingAccount || isLoadingConversions) {
     return (
-      <div className="flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex items-center justify-center p-6"
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
         <span className="ml-2">Loading conversion actions...</span>
-      </div>
+      </motion.div>
     );
   }
 
   if (!conversionActions?.conversionActions.length) {
     return (
-      <div className="text-center">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center space-y-4"
+      >
         <p className="text-muted-foreground">
           No conversion actions found. You can set this up later in the settings.
         </p>
-        <Button onClick={onComplete} className="mt-4">
+        <Button 
+          onClick={onComplete}
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+        >
           Continue
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <motion.form 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      onSubmit={handleSubmit} 
+      className="space-y-6"
+    >
       <div className="space-y-2">
         <label className="text-sm font-medium">
           Select Primary Conversion Action
@@ -89,7 +105,7 @@ export function ConversionSelector({ onComplete }: ConversionSelectorProps) {
           value={selectedConversion}
           onValueChange={setSelectedConversion}
         >
-          <SelectTrigger>
+          <SelectTrigger className="focus:ring-orange-500 focus:border-orange-500">
             <SelectValue placeholder="Select a conversion action" />
           </SelectTrigger>
           <SelectContent>
@@ -102,12 +118,16 @@ export function ConversionSelector({ onComplete }: ConversionSelectorProps) {
         </Select>
         {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
-      <Button
-        type="submit"
-        disabled={setPrimaryConversion.isLoading}
-      >
-        {setPrimaryConversion.isLoading ? 'Saving...' : 'Save and Continue'}
-      </Button>
-    </form>
+      <div className="pt-2 text-right">
+        <Button
+          type="submit"
+          disabled={setPrimaryConversion.isLoading}
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+        >
+          {setPrimaryConversion.isLoading ? 'Saving...' : 'Save and Continue'}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </motion.form>
   );
 } 

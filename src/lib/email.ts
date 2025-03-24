@@ -13,7 +13,7 @@ export async function sendEmail(payload: EmailPayload) {
   const { to, subject, html } = payload;
 
   return await resend.emails.send({
-    from: 'InsightFlow Pro <onboarding@resend.dev>',
+    from: 'InsightFlow <onboarding@resend.dev>',
     to,
     subject,
     html,
@@ -25,11 +25,11 @@ export async function sendVerificationEmail(email: string, token: string) {
 
   try {
     await resend.emails.send({
-      from: 'InsightFlow Pro <onboarding@resend.dev>',
+      from: 'InsightFlow <onboarding@resend.dev>',
       to: email,
       subject: 'Verify your email address',
       html: `
-        <h1>Welcome to InsightFlow Pro!</h1>
+        <h1>Welcome to InsightFlow!</h1>
         <p>Click the link below to verify your email address:</p>
         <a href="${confirmLink}">${confirmLink}</a>
         <p>This link will expire in 24 hours.</p>
@@ -47,7 +47,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
 
   try {
     await resend.emails.send({
-      from: 'InsightFlow Pro <onboarding@resend.dev>',
+      from: 'InsightFlow <onboarding@resend.dev>',
       to: email,
       subject: 'Reset your password',
       html: `

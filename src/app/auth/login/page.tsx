@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Login | InsightFlow Pro",
-  description: "Login to your InsightFlow Pro account",
+  title: "Login | InsightFlow",
+  description: "Login to your InsightFlow account",
 };
 
 import { AuthForm } from "@/components/auth/auth-form";

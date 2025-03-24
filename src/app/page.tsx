@@ -1,276 +1,315 @@
-'use client';
+"use client"
 
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Icons } from "@/components/icons";
-import { useState } from "react";
+import { useEffect } from "react"
+import Link from "next/link"
+import { motion, useAnimation } from "framer-motion"
+import { ArrowRight, BarChart2, Globe, LineChart, PieChart, Zap } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 
 export default function Home() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const controls = useAnimation()
+
+  useEffect(() => {
+    controls.start((i) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.2 },
+    }))
+  }, [controls])
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <Icons.logo />
-              <span className="text-xl font-bold text-foreground">InsightFlow Pro</span>
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center">
+          <div className="mr-4 flex">
+            <Link href="/" className="mr-6 flex items-center space-x-2">
+              <motion.span
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="font-bold text-xl"
+              >
+                InsightFlow
+              </motion.span>
             </Link>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
-                Features
-              </Link>
-              <Link href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
-              </Link>
-              <Link href="#about" className="text-muted-foreground hover:text-foreground transition-colors">
-                About
-              </Link>
+          </div>
+          <div className="flex flex-1 items-center justify-end space-x-4">
+            <nav className="flex items-center space-x-2">
               <Link href="/auth/login">
-                <Button variant="ghost">Sign In</Button>
+                <Button variant="ghost" size="sm">
+                  Log in
+                </Button>
               </Link>
-              <Link href="/auth/signup">
-                <Button>Get Started</Button>
+              <Link href="/auth/register">
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                >
+                  Start Free Trial
+                </Button>
               </Link>
             </nav>
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? (
-                <Icons.x className="h-6 w-6" />
-              ) : (
-                <Icons.menu className="h-6 w-6" />
-              )}
-            </button>
           </div>
-
-          {/* Mobile Navigation */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden py-4 border-t">
-              <nav className="flex flex-col space-y-4">
-                <Link
-                  href="#features"
-                  className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Features
-                </Link>
-                <Link
-                  href="#pricing"
-                  className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Pricing
-                </Link>
-                <Link
-                  href="#about"
-                  className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  About
-                </Link>
-                <div className="flex flex-col space-y-2 px-2">
-                  <Link href="/auth/login">
-                    <Button variant="ghost" className="w-full justify-start">Sign In</Button>
-                  </Link>
-                  <Link href="/auth/signup">
-                    <Button className="w-full justify-start">Get Started</Button>
-                  </Link>
-                </div>
-              </nav>
-            </div>
-          )}
         </div>
       </header>
 
-      {/* Add margin-top to account for fixed header */}
-      <div className="pt-16">
+      <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-primary/10 to-transparent" />
-          <div className="relative max-w-7xl mx-auto">
-            <div className="text-center">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground">
-                Optimize Your Google Ads
-                <span className="text-primary block">With InsightFlow Pro</span>
-              </h1>
-              <p className="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-muted-foreground">
-                Advanced analytics, real-time monitoring, and AI-powered optimization for your Google Ads campaigns. Take control of your advertising performance.
-              </p>
-              <div className="mt-10 flex gap-4 justify-center">
-                <Link href="/auth/signup">
-                  <Button size="lg" className="h-12 px-8">
-                    Get Started
-                    <Icons.arrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/auth/login">
-                  <Button size="lg" variant="outline" className="h-12 px-8">
-                    Sign In
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section className="py-20 bg-muted/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-foreground">
-                Powerful Features for Better Results
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Everything you need to manage and optimize your advertising campaigns
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                {
-                  title: "Real-Time Analytics",
-                  description: "Monitor your campaign performance with live metrics and instant updates",
-                  icon: <Icons.lineChart className="h-6 w-6" />,
-                },
-                {
-                  title: "Smart Campaign Management",
-                  description: "Create, manage, and optimize campaigns with our intuitive interface",
-                  icon: <Icons.megaphone className="h-6 w-6" />,
-                },
-                {
-                  title: "Advanced Targeting",
-                  description: "Reach your ideal audience with precise demographic and interest targeting",
-                  icon: <Icons.target className="h-6 w-6" />,
-                },
-                {
-                  title: "Performance Insights",
-                  description: "Get actionable insights and recommendations to improve your ROI",
-                  icon: <Icons.lightbulb className="h-6 w-6" />,
-                },
-                {
-                  title: "Automated Reporting",
-                  description: "Generate comprehensive reports with key metrics and trends",
-                  icon: <Icons.fileText className="h-6 w-6" />,
-                },
-                {
-                  title: "Team Collaboration",
-                  description: "Work together seamlessly with role-based access and shared workspaces",
-                  icon: <Icons.users className="h-6 w-6" />,
-                },
-              ].map((feature, i) => (
-                <div
-                  key={i}
-                  className="relative p-6 bg-background rounded-lg border hover:border-primary/50 transition-colors"
-                >
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {feature.description}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-background to-muted">
+          <div className="container px-4 md:px-6">
+            <div className="grid gap-6 lg:grid-cols-[1fr_500px] lg:gap-12 xl:grid-cols-[1fr_550px]">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex flex-col justify-center space-y-4"
+              >
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
+                    Transform Your Ad Performance
+                  </h1>
+                  <p className="max-w-[600px] text-muted-foreground md:text-xl">
+                    Unlock actionable insights across all your marketing channels. Make data-driven decisions that boost
+                    your ROAS.
                   </p>
                 </div>
-              ))}
+                <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                  <Link href="/signup">
+                    <Button
+                      size="lg"
+                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                    >
+                      Start 14-Day Free Trial
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/demo">
+                    <Button size="lg" variant="outline">
+                      Watch Demo
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 }}
+                className="flex items-center justify-center lg:justify-end"
+              >
+                <div className="relative">
+                  <div className="absolute -top-4 -left-4 h-72 w-72 bg-orange-500/10 rounded-full blur-3xl" />
+                  <img
+                    src="/placeholder.svg?height=500&width=500"
+                    alt="InsightFlow Dashboard Preview"
+                    className="relative rounded-lg shadow-2xl"
+                    width={500}
+                    height={500}
+                  />
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
 
         {/* Stats Section */}
-        <section className="py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-              {[
-                { value: "50%", label: "Average CTR Improvement" },
-                { value: "30%", label: "Cost Reduction" },
-                { value: "2x", label: "ROAS Increase" },
-              ].map((stat, i) => (
-                <div key={i} className="p-6">
-                  <div className="text-4xl font-bold text-primary mb-2">
-                    {stat.value}
+        <section className="w-full py-12 md:py-24 lg:py-32">
+          <div className="container px-4 md:px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={controls}
+              custom={0}
+              className="grid grid-cols-2 gap-4 md:grid-cols-4"
+            >
+              <Card className="p-6 text-center">
+                <h3 className="text-3xl font-bold">120K+</h3>
+                <p className="text-sm text-muted-foreground">Active Users</p>
+              </Card>
+              <Card className="p-6 text-center">
+                <h3 className="text-3xl font-bold">4.8</h3>
+                <p className="text-sm text-muted-foreground">User Rating</p>
+              </Card>
+              <Card className="p-6 text-center">
+                <h3 className="text-3xl font-bold">$2.5B</h3>
+                <p className="text-sm text-muted-foreground">Ad Spend Analyzed</p>
+              </Card>
+              <Card className="p-6 text-center">
+                <h3 className="text-3xl font-bold">35%</h3>
+                <p className="text-sm text-muted-foreground">Avg. ROAS Increase</p>
+              </Card>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+          <div className="container px-4 md:px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={controls}
+              custom={1}
+              className="flex flex-col items-center justify-center space-y-4 text-center"
+            >
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Everything You Need to Scale
+                </h2>
+                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                  Powerful features to optimize your advertising campaigns
+                </p>
+              </div>
+            </motion.div>
+            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 py-12 md:grid-cols-2 lg:grid-cols-3">
+              {features.map((feature, i) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={controls}
+                  custom={i + 2}
+                  className="flex flex-col items-center space-y-2 rounded-lg border p-6 backdrop-blur-sm"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
+                    {feature.icon}
                   </div>
-                  <div className="text-muted-foreground">{stat.label}</div>
-                </div>
+                  <h3 className="text-xl font-bold">{feature.title}</h3>
+                  <p className="text-center text-muted-foreground">{feature.description}</p>
+                </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-20 bg-primary text-primary-foreground">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold mb-6">
-              Ready to Optimize Your Ad Campaigns?
-            </h2>
-            <p className="text-lg mb-10 opacity-90">
-              Join thousands of marketers who are getting better results with InsightFlow Pro
-            </p>
-            <Link href="/auth/signup">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="h-12 px-8 bg-background text-primary hover:bg-background/90"
+        {/* App Preview Section */}
+        <section className="w-full py-12 md:py-24 lg:py-32">
+          <div className="container px-4 md:px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={controls}
+              custom={5}
+              className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12"
+            >
+              <div className="flex flex-col justify-center space-y-4">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Take Control Anywhere</h2>
+                  <p className="max-w-[600px] text-muted-foreground md:text-xl">
+                    Monitor your campaigns, receive alerts, and make adjustments on the go with our powerful mobile app.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                  <Button size="lg" variant="outline" className="gap-2">
+                    <img src="/app-store.svg" alt="App Store" className="h-5" />
+                    Download for iOS
+                  </Button>
+                  <Button size="lg" variant="outline" className="gap-2">
+                    <img src="/play-store.svg" alt="Play Store" className="h-5" />
+                    Download for Android
+                  </Button>
+                </div>
+              </div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={controls}
+                custom={6}
+                className="relative mx-auto max-w-[300px]"
               >
-                Start Free Trial
-                <Icons.arrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+                <div className="absolute -top-4 -right-4 h-72 w-72 bg-orange-500/10 rounded-full blur-3xl" />
+                <img
+                  src="/placeholder.svg?height=600&width=300"
+                  alt="InsightFlow Mobile App"
+                  className="relative rounded-[2.5rem] shadow-2xl"
+                  width={300}
+                  height={600}
+                />
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="py-12 border-t">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-4">Product</h3>
-                <ul className="space-y-3">
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Features</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Pricing</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Case Studies</Link></li>
-                </ul>
+        {/* CTA Section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+          <div className="container px-4 md:px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={controls}
+              custom={7}
+              className="flex flex-col items-center justify-center space-y-4 text-center"
+            >
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Ready to Optimize Your Ad Spend?</h2>
+                <p className="max-w-[600px] text-muted-foreground md:text-xl">
+                  Join thousands of marketers who have already transformed their advertising performance.
+                </p>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-4">Company</h3>
-                <ul className="space-y-3">
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">About</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Blog</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Careers</Link></li>
-                </ul>
+              <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                <Link href="/signup">
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                  >
+                    Start Free Trial
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Button size="lg" variant="outline">
+                  Schedule a Demo
+                </Button>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-4">Resources</h3>
-                <ul className="space-y-3">
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Documentation</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Help Center</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">API Reference</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-4">Legal</h3>
-                <ul className="space-y-3">
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Privacy</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Terms</Link></li>
-                  <li><Link href="#" className="text-muted-foreground hover:text-foreground">Security</Link></li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-12 pt-8 border-t text-center text-muted-foreground">
-              <p>© 2024 InsightFlow Pro. All rights reserved.</p>
-            </div>
+            </motion.div>
           </div>
-        </footer>
-      </div>
+        </section>
+      </main>
+
+      <footer className="border-t py-6 md:py-8">
+        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
+          <div className="flex flex-col items-center gap-4 md:flex-row md:gap-6">
+            <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+              © 2025 InsightFlow. All rights reserved.
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Link href="/terms" className="text-sm text-muted-foreground underline underline-offset-4">
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-sm text-muted-foreground underline underline-offset-4">
+              Privacy
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
-  );
+  )
 }
+
+const features = [
+  {
+    title: "Multi-Channel Analytics",
+    description: "View performance data from all your ad platforms in one unified dashboard",
+    icon: <Globe className="h-6 w-6 text-orange-500" />,
+  },
+  {
+    title: "Real-time Insights",
+    description: "Track key metrics like CTR, CPC, and ROAS as they happen",
+    icon: <Zap className="h-6 w-6 text-orange-500" />,
+  },
+  {
+    title: "Smart Reporting",
+    description: "Generate beautiful, customizable reports with just a few clicks",
+    icon: <BarChart2 className="h-6 w-6 text-orange-500" />,
+  },
+  {
+    title: "Predictive Analytics",
+    description: "Forecast future performance to optimize your campaigns",
+    icon: <LineChart className="h-6 w-6 text-orange-500" />,
+  },
+  {
+    title: "Custom Dashboards",
+    description: "Build personalized views for different team members and goals",
+    icon: <PieChart className="h-6 w-6 text-orange-500" />,
+  },
+  {
+    title: "Automated Alerts",
+    description: "Get notified instantly when important metrics change",
+    icon: <Zap className="h-6 w-6 text-orange-500" />,
+  },
+]
+

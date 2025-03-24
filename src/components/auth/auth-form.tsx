@@ -21,8 +21,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/dto";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { motion } from "framer-motion";
 import type { z } from "zod";
-import Image from "next/image";
+import { toast } from "sonner";
 
 interface AuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
   type: "login" | "register" | "reset";
@@ -38,7 +39,6 @@ export function AuthForm({ className, type, ...props }: AuthFormProps) {
   const verified = searchParams.get("verified");
   const token = searchParams.get("token");
 
-  // Get the appropriate schema based on form type
   const getSchema = () => {
     switch (type) {
       case "login":
@@ -109,8 +109,7 @@ export function AuthForm({ className, type, ...props }: AuthFormProps) {
           setError("Invalid email or password");
           return;
         }
-
-        // After successful login, let the dashboard handle the redirect
+        toast.success("Login successful! Redirecting to dashboard...");
         router.push("/dashboard");
       } else if (type === "register") {
         const registerData = data as z.infer<typeof registerUserSchema>;
@@ -158,179 +157,217 @@ export function AuthForm({ className, type, ...props }: AuthFormProps) {
   };
 
   return (
-    <Card className={cn("w-[400px] border-cool-grey/20", className)} {...props}>
-      <div className="flex flex-col items-center pt-8 pb-4 space-y-2">
-        <div className="text-3xl font-bold text-charcoal">
-          InsightFlow
-          <span className="text-electric-yellow">Pro</span>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className={cn("w-[400px] border-cool-grey/20 shadow-lg", className)} {...props}>
+        <div className="flex flex-col items-center pt-8 pb-4 space-y-2">
+          <div className="text-3xl font-bold">
+            Insight<span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600">Flow</span>
+          </div>
+          <div className="text-sm text-muted-foreground">Analytics & Insights Platform</div>
         </div>
-        <div className="text-sm text-cool-grey">Analytics & Insights Platform</div>
-      </div>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold tracking-tight text-charcoal">
-          {type === "login" && "Welcome back"}
-          {type === "register" && "Create your account"}
-          {type === "reset" && (token ? "Reset Password" : "Forgot Password")}
-        </CardTitle>
-        <CardDescription className="text-cool-grey">
-          {type === "login" && "Enter your credentials to access your account"}
-          {type === "register" && "Enter your details to create your account"}
-          {type === "reset" && (token 
-            ? "Enter your new password below" 
-            : "Enter your email to reset your password")}
-        </CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            {type === "register" && (
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {(type === "login" || type === "register" || (type === "reset" && !token)) && (
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="m@example.com" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {(type === "login" || type === "register" || (type === "reset" && token)) && (
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{type === "reset" ? "New Password" : "Password"}</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {(type === "register" || (type === "reset" && token)) && (
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {error && (
-              <div className="text-sm text-red-500 bg-red-50 p-2 rounded">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="text-sm text-green-500 bg-green-50 p-2 rounded">
-                {success}
-              </div>
-            )}
-            {type === "login" && verified && (
-              <div className="text-sm text-green-500 bg-green-50 p-2 rounded">
-                Email verified successfully! You can now sign in.
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button
-              type="submit"
-              className="w-full bg-charcoal hover:bg-charcoal/90 text-white"
-              disabled={isLoading || isGoogleLoading}
-            >
-              {isLoading && (
-                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {type === "login" && "Sign In"}
-              {type === "register" && "Create Account"}
-              {type === "reset" && (token ? "Reset Password" : "Send Reset Link")}
-            </Button>
-            
-            <div className="text-sm text-center space-y-2 text-cool-grey">
-              {type === "login" && (
-                <>
-                  <p>
-                    <Link href="/auth/register" className="hover:underline text-primary">
-                      Don't have an account? Sign up
-                    </Link>
-                  </p>
-                  <p>
-                    <Link href="/auth/reset-password" className="hover:underline text-primary">
-                      Forgot your password?
-                    </Link>
-                  </p>
-                </>
-              )}
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {type === "login" && "Welcome back"}
+            {type === "register" && "Create your account"}
+            {type === "reset" && (token ? "Reset Password" : "Forgot Password")}
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            {type === "login" && "Enter your credentials to access your account"}
+            {type === "register" && "Enter your details to create your account"}
+            {type === "reset" && (token 
+              ? "Enter your new password below" 
+              : "Enter your email to reset your password")}
+          </CardDescription>
+        </CardHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
               {type === "register" && (
-                <p>
-                  <Link href="/auth/login" className="hover:underline text-primary">
-                    Already have an account? Sign in
-                  </Link>
-                </p>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="John Doe" 
+                          {...field} 
+                          disabled={isLoading} 
+                          className="focus:border-orange-500 focus:ring-orange-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-              {type === "reset" && (
-                <p>
-                  <Link href="/auth/login" className="hover:underline text-primary">
-                    Remember your password? Sign in
-                  </Link>
-                </p>
+              {(type === "login" || type === "register" || (type === "reset" && !token)) && (
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="email" 
+                          placeholder="m@example.com" 
+                          {...field} 
+                          disabled={isLoading}
+                          className="focus:border-orange-500 focus:ring-orange-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            </div>
+              {(type === "login" || type === "register" || (type === "reset" && token)) && (
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{type === "reset" ? "New Password" : "Password"}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          {...field} 
+                          disabled={isLoading}
+                          className="focus:border-orange-500 focus:ring-orange-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              {(type === "register" || (type === "reset" && token)) && (
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          {...field} 
+                          disabled={isLoading}
+                          className="focus:border-orange-500 focus:ring-orange-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm text-red-500 bg-red-50 p-3 rounded-md"
+                >
+                  {error}
+                </motion.div>
+              )}
+              {success && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm text-green-500 bg-green-50 p-3 rounded-md"
+                >
+                  {success}
+                </motion.div>
+              )}
+              {type === "login" && verified && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm text-green-500 bg-green-50 p-3 rounded-md"
+                >
+                  Email verified successfully! You can now sign in.
+                </motion.div>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
+                disabled={isLoading || isGoogleLoading}
+              >
+                {isLoading && (
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {type === "login" && "Sign In"}
+                {type === "register" && "Create Account"}
+                {type === "reset" && (token ? "Reset Password" : "Send Reset Link")}
+              </Button>
+              
+              <div className="text-sm text-center space-y-2 text-muted-foreground">
+                {type === "login" && (
+                  <>
+                    <p>
+                      <Link href="/auth/register" className="hover:underline text-orange-600 hover:text-orange-700">
+                        Don't have an account? Sign up
+                      </Link>
+                    </p>
+                    <p>
+                      <Link href="/auth/reset-password" className="hover:underline text-orange-600 hover:text-orange-700">
+                        Forgot your password?
+                      </Link>
+                    </p>
+                  </>
+                )}
+                {type === "register" && (
+                  <p>
+                    <Link href="/auth/login" className="hover:underline text-orange-600 hover:text-orange-700">
+                      Already have an account? Sign in
+                    </Link>
+                  </p>
+                )}
+                {type === "reset" && (
+                  <p>
+                    <Link href="/auth/login" className="hover:underline text-orange-600 hover:text-orange-700">
+                      Remember your password? Sign in
+                    </Link>
+                  </p>
+                )}
+              </div>
 
-            <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-cool-grey/20" />
+              <div className="relative w-full">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-cool-grey/20" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-cool-grey">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-cool-grey/20 hover:bg-cool-grey/5"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading || isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Icons.google className="mr-2 h-4 w-4" />
-              )}
-              Google
-            </Button>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border hover:bg-orange-50"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading || isGoogleLoading}
+              >
+                {isGoogleLoading ? (
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Icons.google className="mr-2 h-4 w-4" />
+                )}
+                Google
+              </Button>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </motion.div>
   );
 } 

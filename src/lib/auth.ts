@@ -196,15 +196,14 @@ export async function verifyEmail(token: string) {
     },
   });
 
-  console.log("Verification attempt for token:", token);
-  console.log("Found verification token:", verificationToken);
+
 
   if (!verificationToken) {
     throw new Error("Invalid or expired verification token");
   }
 
   try {
-    // Update the user's email verification status
+    
     await db.user.update({
       where: {
         email: verificationToken.identifier,
@@ -214,7 +213,6 @@ export async function verifyEmail(token: string) {
       },
     });
 
-    // Delete the verification token
     await db.verificationToken.delete({
       where: {
         identifier_token: {
@@ -224,7 +222,7 @@ export async function verifyEmail(token: string) {
       },
     });
 
-    console.log("Successfully verified email for:", verificationToken.identifier);
+ 
   } catch (error) {
     console.error("Error during verification process:", error);
     throw new Error("Failed to verify email. Please try again or contact support.");

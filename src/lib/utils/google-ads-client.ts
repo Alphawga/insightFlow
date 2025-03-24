@@ -14,10 +14,16 @@ export class GoogleAdsClient {
   }
 
   public getOAuth2Client(): OAuth2Client {
+    // Use a hardcoded value for local development to ensure consistency
+    const redirectUri = process.env.NODE_ENV === 'production' 
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google-ads/callback`
+      : 'http://localhost:3000/api/auth/google-ads/callback';
+      
+      
     return new OAuth2Client({
       clientId: GOOGLE_ADS_CONFIG.client_id,
       clientSecret: GOOGLE_ADS_CONFIG.client_secret,
-      redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google-ads/callback`,
+      redirectUri: redirectUri,
     });
   }
 
@@ -36,14 +42,12 @@ export class GoogleAdsClient {
       refresh_token: refreshToken,
     });
 
-    const { token: access_token } = await oauth2Client.getAccessToken();
+
 
     return new GoogleAdsApi({
       client_id: GOOGLE_ADS_CONFIG.client_id!,
       client_secret: GOOGLE_ADS_CONFIG.client_secret!,
       developer_token: GOOGLE_ADS_CONFIG.developer_token!,
-      refresh_token: refreshToken,
-      access_token: access_token as string,
     });
   }
 

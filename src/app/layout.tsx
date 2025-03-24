@@ -6,7 +6,7 @@ import Providers from './_providers/providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'InsightFlow Pro',
+  title: 'InsightFlow',
   description: 'Analytics & Insights Platform',
 };
 

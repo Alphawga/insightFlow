@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { trpc } from '@/app/_providers/trpc-provider';
+  import { trpc } from '@/app/_providers/trpc-provider';
+import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 
 interface WorkspaceFormProps {
   onComplete: () => void;
@@ -33,7 +35,13 @@ export function WorkspaceForm({ onComplete }: WorkspaceFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <motion.form 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+      onSubmit={handleSubmit} 
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="name">Workspace Name</Label>
         <Input
@@ -41,12 +49,20 @@ export function WorkspaceForm({ onComplete }: WorkspaceFormProps) {
           placeholder="My Agency"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          className="focus:border-orange-500 focus:ring-orange-500"
         />
         {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
-      <Button type="submit" disabled={createWorkspace.isLoading}>
-        {createWorkspace.isLoading ? 'Creating...' : 'Create Workspace'}
-      </Button>
-    </form>
+      <div className="pt-2 text-right">
+        <Button 
+          type="submit" 
+          disabled={createWorkspace.isLoading}
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+        >
+          {createWorkspace.isLoading ? 'Creating...' : 'Create Workspace'}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </motion.form>
   );
 } 

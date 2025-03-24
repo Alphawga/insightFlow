@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Verify Email | InsightFlow Pro",
+  title: "Verify Email | InsightFlow",
   description: "Verify your email address",
 };
 

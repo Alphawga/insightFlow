@@ -15,16 +15,83 @@ export const connectAccount = publicProcedure
     z.object({
       workspaceId: z.string(),
       code: z.string(),
+      accountId: z.string(),
+      name: z.string(),
     })
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     try {
-      const accounts = await GoogleAdsService.getInstance().connectAccount(
-        input.workspaceId,
-        input.code
-      );
-      return { accounts };
+      console.log('Connecting account with code', input.code.substring(0, 10) + '...');
+      
+      const googleAdsClient = GoogleAdsClient.getInstance();
+      
+      // Get tokens first
+      const { refresh_token, access_token } = await googleAdsClient.getAccessToken(input.code);
+      console.log('Tokens received successfully');
+
+      // Store the refresh token in your database here
+      await ctx.db.adAccount.create({
+        data: {
+          workspaceId: input.workspaceId,
+          platform: 'GOOGLE_ADS',
+          refreshToken: refresh_token,
+          accountId: input.accountId || '',
+          name: input.name || '',
+          status: 'ACTIVE',
+        }
+      });
+
+      // Get the user ID from the session
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
+
+      // Mark the connect-ads step as completed
+      const connectStep = await ctx.db.onboardingProgress.upsert({
+        where: { 
+          userId_step: { userId, step: 'connect-ads' } 
+        },
+        update: {
+          completed: true,
+          completedAt: new Date(),
+        },
+        create: {
+          userId,
+          step: 'connect-ads',
+          completed: true,
+          completedAt: new Date(),
+        },
+      });
+
+      // Set the next step (conversion) as current
+      await ctx.db.onboardingProgress.upsert({
+        where: { 
+          userId_step: { userId, step: 'conversion' } 
+        },
+        update: {
+          completed: false,
+          completedAt: null,
+        },
+        create: {
+          userId,
+          step: 'conversion',
+          completed: false,
+          completedAt: null,
+        },
+      });
+
+      return { success: true };
     } catch (error) {
+      console.error('Detailed connection error:', error);
+      
+
+      if (error instanceof Error && 'response' in error) {
+        const err = error as any;
+        console.error('Error response data:', err.response?.data);
+        console.error('Error response status:', err.response?.status);
+      }
+      
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: error instanceof Error ? error.message : 'Failed to connect Google Ads account',
