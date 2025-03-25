@@ -14,11 +14,9 @@ export class GoogleAdsClient {
   }
 
   public getOAuth2Client(): OAuth2Client {
-    // Use a hardcoded value for local development to ensure consistency
     const redirectUri = process.env.NODE_ENV === 'production' 
       ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google-ads/callback`
       : 'http://localhost:3000/api/auth/google-ads/callback';
-      
       
     return new OAuth2Client({
       clientId: GOOGLE_ADS_CONFIG.client_id,
@@ -41,8 +39,6 @@ export class GoogleAdsClient {
     oauth2Client.setCredentials({
       refresh_token: refreshToken,
     });
-
-
 
     return new GoogleAdsApi({
       client_id: GOOGLE_ADS_CONFIG.client_id!,
@@ -85,24 +81,15 @@ export class GoogleAdsClient {
         }
       });
       
-      // Log to debug
-      console.log('Google Ads customer response:', JSON.stringify(response.data));
-      
       if (response.data?.resourceNames?.length > 0) {
-        // Format: "customers/1234567890"
         const customerResourceName = response.data.resourceNames[0];
-        const customerId = customerResourceName.split('/')[1];
-        console.log('Found customer ID:', customerId);
-        return customerId;
+        return customerResourceName.split('/')[1];
       }
       
-      console.warn('No Google Ads accounts found, using fallback ID');
       return `temp_${Date.now()}`;
     } catch (error) {
-      console.error('Error getting customer ID:', error);
-      // Return a fallback ID to allow the onboarding to continue
+      console.error('Error retrieving Google Ads customer ID:', error);
       return `temp_${Date.now()}`;
     }
   }
-
 } 

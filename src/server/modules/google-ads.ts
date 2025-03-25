@@ -16,42 +16,33 @@ export const connectAccount = publicProcedure
       workspaceId: z.string(),
       code: z.string(),
       name: z.string(),
-
     })
   )
   .mutation(async ({ input, ctx }) => {
     try {
-      console.log('Connecting account with code', input.code.substring(0, 10) + '...');
-      
       const googleAdsClient = GoogleAdsClient.getInstance();
       
-      // 1. Exchange the one-time code for tokens
       const { refresh_token, access_token } = await googleAdsClient.getAccessToken(input.code);
-      console.log('Tokens received successfully');
-
-      // 2. Retrieve the actual customer ID using the just-obtained access token
       const customerId = await googleAdsClient.getCustomerId(access_token);
 
-      // 3. Store in the DB with the real customer ID
       await ctx.db.adAccount.create({
         data: {
           workspaceId: input.workspaceId,
           platform: 'GOOGLE_ADS',
           refreshToken: refresh_token,
-          accountId: customerId,                // Now using the real ID
-          name: input.name || '',
+          accountId: customerId,
+          name: input.name || `Google Ads Account ${customerId}`,
           status: 'ACTIVE',
         }
       });
 
-      // Get the user ID from the session
       const userId = ctx.session?.user?.id;
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED' });
       }
 
-      // Mark the connect-ads step as completed
-      const connectStep = await ctx.db.onboardingProgress.upsert({
+      // Update onboarding progress
+      await ctx.db.onboardingProgress.upsert({
         where: { 
           userId_step: { userId, step: 'connect-ads' } 
         },
@@ -67,7 +58,6 @@ export const connectAccount = publicProcedure
         },
       });
 
-      // Set the next step (conversion) as current
       await ctx.db.onboardingProgress.upsert({
         where: { 
           userId_step: { userId, step: 'conversion' } 
@@ -86,13 +76,11 @@ export const connectAccount = publicProcedure
 
       return { success: true };
     } catch (error) {
-      console.error('Detailed connection error:', error);
+      console.error('Google Ads connection error:', error);
       
-
       if (error instanceof Error && 'response' in error) {
         const err = error as any;
-        console.error('Error response data:', err.response?.data);
-        console.error('Error response status:', err.response?.status);
+        console.error('Response details:', err.response?.data, err.response?.status);
       }
       
       throw new TRPCError({
