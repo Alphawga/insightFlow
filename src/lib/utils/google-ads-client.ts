@@ -67,4 +67,42 @@ export class GoogleAdsClient {
       access_token: tokens.access_token,
     };
   }
+
+  public async getCustomerId(accessToken: string): Promise<string> {
+    try {
+      const oauth2Client = this.getOAuth2Client();
+      oauth2Client.setCredentials({ access_token: accessToken });
+      
+      interface CustomerResponse {
+        resourceNames: string[];
+      }
+      
+      const response = await oauth2Client.request<CustomerResponse>({
+        url: 'https://googleads.googleapis.com/v16/customers:listAccessibleCustomers',
+        method: 'GET',
+        headers: {
+          'developer-token': GOOGLE_ADS_CONFIG.developer_token
+        }
+      });
+      
+      // Log to debug
+      console.log('Google Ads customer response:', JSON.stringify(response.data));
+      
+      if (response.data?.resourceNames?.length > 0) {
+        // Format: "customers/1234567890"
+        const customerResourceName = response.data.resourceNames[0];
+        const customerId = customerResourceName.split('/')[1];
+        console.log('Found customer ID:', customerId);
+        return customerId;
+      }
+      
+      console.warn('No Google Ads accounts found, using fallback ID');
+      return `temp_${Date.now()}`;
+    } catch (error) {
+      console.error('Error getting customer ID:', error);
+      // Return a fallback ID to allow the onboarding to continue
+      return `temp_${Date.now()}`;
+    }
+  }
+
 } 

@@ -7,12 +7,14 @@ import { ONBOARDING_STEPS } from '@/lib/constants';
 export const getOnboardingStatus = publicProcedure
   .query(async ({ ctx }) => {
     const userId = ctx.session?.user?.id;
+    console.log('userId:', userId);
     if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
     
     const steps = await ctx.db.onboardingProgress.findMany({
       where: { userId },
       orderBy: { createdAt: 'asc' },
     });
+    console.log('steps:', steps);
     
     const isComplete = ONBOARDING_STEPS.every(step => 
       steps.some(s => s.step === step && s.completed)

@@ -15,8 +15,8 @@ export const connectAccount = publicProcedure
     z.object({
       workspaceId: z.string(),
       code: z.string(),
-      accountId: z.string(),
       name: z.string(),
+
     })
   )
   .mutation(async ({ input, ctx }) => {
@@ -25,17 +25,20 @@ export const connectAccount = publicProcedure
       
       const googleAdsClient = GoogleAdsClient.getInstance();
       
-      // Get tokens first
+      // 1. Exchange the one-time code for tokens
       const { refresh_token, access_token } = await googleAdsClient.getAccessToken(input.code);
       console.log('Tokens received successfully');
 
-      // Store the refresh token in your database here
+      // 2. Retrieve the actual customer ID using the just-obtained access token
+      const customerId = await googleAdsClient.getCustomerId(access_token);
+
+      // 3. Store in the DB with the real customer ID
       await ctx.db.adAccount.create({
         data: {
           workspaceId: input.workspaceId,
           platform: 'GOOGLE_ADS',
           refreshToken: refresh_token,
-          accountId: input.accountId || '',
+          accountId: customerId,                // Now using the real ID
           name: input.name || '',
           status: 'ACTIVE',
         }

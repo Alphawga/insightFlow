@@ -1,0 +1,37 @@
+# InsightFlow Project Intelligence
+
+## Project Context
+- 90-day personal brand and product launch journey
+- SaaS application focused on data analytics and insights
+- Being built with limited time (4-5 hours daily) alongside full-time job
+- Following Hormozi-style efficiency principles
+
+## Development Patterns
+- Next.js with TypeScript for modern web development
+- App Router structure for page organization
+- tRPC for type-safe API communication
+- Prisma for database operations
+- ShadCN UI components for consistent design
+- Documentation-to-content pipeline for efficient content creation
+
+## Workflow Preferences
+- 25-minute focused development sprints with 5-minute documentation periods
+- Weekend acceleration blocks for major progress
+- Tasks prioritized by impact and matched to energy levels
+- Ruthless feature prioritization for MVP
+- Content creation directly from development documentation
+
+## Critical Implementation Paths
+- Authentication system using NextAuth.js
+- Dashboard with analytics widgets
+- Data visualization components
+- User management functionality
+- Integration with external data sources
+
+## Known Challenges
+- Limited development time due to full-time employment
+- Balancing feature development with content creation
+- Maintaining focus on essential MVP features only
+- Converting technical documentation into engaging content
+
+This intelligence document will be updated as new patterns and preferences emerge during the project. 

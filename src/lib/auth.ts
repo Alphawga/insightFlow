@@ -39,7 +39,8 @@ export const authOptions: NextAuthOptions = {
           access_type: "offline",
           response_type: "code"
         }
-      }
+      },
+      allowDangerousEmailAccountLinking: true
     }),
     CredentialsProvider({
       name: "credentials",
@@ -82,29 +83,44 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
-        if (!user.email) {
-          return false;
-        }
-        // Check if user exists
+        if (!user.email) return false;
+
+       
         const existingUser = await db.user.findUnique({
-          where: { email: user.email }
+          where: { email: user.email },
+          include: { accounts: true }
         });
 
-        if (!existingUser) {
-          // Create new user if they don't exist
-          await db.user.create({
+       
+        if (existingUser) {
+          
+
+         
+          await db.user.update({
+            where: { id: existingUser.id },
             data: {
-              email: user.email,
-              name: user.name,
-              emailVerified: new Date(), // Google accounts are pre-verified
-              image: user.image
+              emailVerified: new Date(),
+              name: user.name || existingUser.name,
+              image: user.image || existingUser.image
             }
           });
+          
+          return true;
         }
+
+        await db.user.create({
+          data: {
+            email: user.email,
+            name: user.name,
+            emailVerified: new Date(),
+            image: user.image,
+            
+          }
+        });
         return true;
       }
 
-      // For credentials, check email verification
+      // Existing credentials handling
       if (account?.provider === "credentials") {
         const dbUser = await db.user.findUnique({
           where: { email: user.email! }
@@ -142,7 +158,7 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
-        // Update user data on each sign in to keep it in sync with Google
+        
         await db.user.update({
           where: { email: user.email! },
           data: {

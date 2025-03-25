@@ -9,7 +9,7 @@ export function DashboardNav() {
   const pathname = usePathname()
 
   return (
-    <div className="flex h-full w-full flex-col border-r bg-muted/40">
+    <div className="flex h-full w-full flex-col border-r bg-muted/40 max-h-screen ">
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <span className="text-lg font-bold">InsightFlow</span>
@@ -84,7 +84,7 @@ export function DashboardNav() {
       </div>
       <div className="mt-auto p-4">
         <Button variant="outline" className="w-full justify-start" asChild>
-          <Link href="/logout">
+          <Link href="/auth/login">
             <LogOut className="mr-2 h-4 w-4" />
             Log out
           </Link>
