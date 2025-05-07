@@ -46,6 +46,48 @@ interface GoogleAdsResponse {
     date: string;
   };
   conversion_action?: GoogleAdsConversionAction;
+  ad_group?: GoogleAdsAdGroup;
+}
+
+interface GoogleAdsAdGroup {
+  id: string;
+  name: string;
+  status: string;
+  cpc_bid_micros?: string;
+}
+
+interface CreateAdGroupParams {
+  customerId: string;
+  campaignId: string;
+  name: string;
+  status: string;
+  cpcBid: number;
+  targeting?: {
+    locations?: string[];
+    languages?: string[];
+    demographics?: {
+      ageRanges?: string[];
+      genders?: string[];
+      parentalStatus?: string[];
+      householdIncome?: string[];
+    };
+    interests?: string[];
+    keywords?: string[];
+  };
+  description?: string;
+  refreshToken: string;
+}
+
+interface UpdateAdGroupParams extends CreateAdGroupParams {
+  adGroupId: string;
+}
+
+interface UpdateAdGroupStatusParams {
+  customerId: string;
+  campaignId: string;
+  adGroupId: string;
+  status: string;
+  refreshToken: string;
 }
 
 export class GoogleAdsService {
@@ -134,6 +176,7 @@ export class GoogleAdsService {
         this.syncCampaigns(account),
         this.syncMetrics(account),
         this.syncConversionActions(account),
+        this.syncAdGroups(account),
       ]);
 
       await db.adAccount.update({
@@ -341,5 +384,269 @@ export class GoogleAdsService {
         });
       })
     );
+  }
+
+  private async syncAdGroups(account: AdAccount) {
+    const client = await GoogleAdsClient.getInstance().getClient(account.refreshToken!);
+    const customer = client.Customer({ 
+      customer_id: account.accountId,
+      refresh_token: account.refreshToken!
+    });
+
+    const query = `
+      SELECT 
+        campaign.id,
+        ad_group.id,
+        ad_group.name,
+        ad_group.status,
+        ad_group.cpc_bid_micros
+      FROM ad_group
+      WHERE ad_group.status != 'REMOVED'
+    `;
+
+    const response = await customer.query<GoogleAdsResponse[]>(query);
+
+    // Process and store ad groups
+    await Promise.all(
+      response.map(async (row: GoogleAdsResponse) => {
+        try {
+          if (!row.campaign || !row.ad_group) return;
+          
+          const adGroup = row.ad_group;
+          const campaignId = row.campaign.id;
+
+          // Find the campaign
+          const campaign = await db.campaign.findUnique({
+            where: {
+              adAccountId_externalId: {
+                adAccountId: account.id,
+                externalId: campaignId,
+              },
+            },
+          });
+
+          if (!campaign) return;
+
+          return db.adGroup.upsert({
+            where: {
+              platformAdGroupId_campaignId: {
+                platformAdGroupId: adGroup.id,
+                campaignId: campaign.id,
+              },
+            },
+            create: {
+              campaignId: campaign.id,
+              name: adGroup.name,
+              status: adGroup.status,
+              cpcBid: adGroup.cpc_bid_micros ? Number(adGroup.cpc_bid_micros) / 1_000_000 : 0,
+              platformAdGroupId: adGroup.id,
+            },
+            update: {
+              name: adGroup.name,
+              status: adGroup.status,
+              cpcBid: adGroup.cpc_bid_micros ? Number(adGroup.cpc_bid_micros) / 1_000_000 : 0,
+            },
+          });
+        } catch (error) {
+          console.error('Error processing ad group:', error);
+        }
+      })
+    );
+  }
+
+  public async createAdGroup(params: CreateAdGroupParams) {
+    try {
+      const client = await GoogleAdsClient.getInstance().getClient(params.refreshToken);
+      const customer = client.Customer({ 
+        customer_id: params.customerId,
+        refresh_token: params.refreshToken
+      });
+      
+      // Create ad group in Google Ads with minimal required fields
+      // Using as any to bypass the type checking since the actual API accepts these fields
+      const adGroup = {
+        name: params.name,
+        status: params.status,
+        campaign: `customers/${params.customerId}/campaigns/${params.campaignId}`,
+        cpc_bid_micros: Math.round(params.cpcBid * 1_000_000).toString()
+      } as any;
+      
+      const response = await customer.adGroups.create([adGroup]);
+      
+      if (!response || !response.results || response.results.length === 0) {
+        throw new Error('Failed to create ad group');
+      }
+      
+      const newAdGroup = response.results[0];
+      // Handle possible null or undefined
+      const resourceName = newAdGroup.resource_name || '';
+      const adGroupId = resourceName.split('/').pop() || '';
+      
+      // Apply targeting criteria if provided
+      if (params.targeting) {
+        await this.applyTargetingCriteria({
+          customerId: params.customerId,
+          refreshToken: params.refreshToken,
+          adGroupId,
+          targeting: params.targeting
+        });
+      }
+      
+      return {
+        id: adGroupId,
+        name: params.name,
+        status: params.status,
+      };
+    } catch (error) {
+      console.error('Error creating ad group:', error);
+      throw error;
+    }
+  }
+
+  public async updateAdGroup(params: UpdateAdGroupParams) {
+    try {
+      const client = await GoogleAdsClient.getInstance().getClient(params.refreshToken);
+      const customer = client.Customer({ 
+        customer_id: params.customerId,
+        refresh_token: params.refreshToken
+      });
+      
+      // Update ad group with minimal required fields
+      // Using as any to bypass the type checking since the actual API accepts these fields
+      const adGroup = {
+        resource_name: `customers/${params.customerId}/adGroups/${params.adGroupId}`,
+        name: params.name,
+        status: params.status,
+        cpc_bid_micros: Math.round(params.cpcBid * 1_000_000).toString()
+      } as any;
+      
+      await customer.adGroups.update([adGroup], {
+        update_mask: {
+          paths: ['name', 'status', 'cpc_bid_micros']
+        }
+      } as any);
+      
+      // Update targeting criteria if provided
+      if (params.targeting) {
+        // Remove existing targeting criteria
+        await this.removeTargetingCriteria({
+          customerId: params.customerId,
+          refreshToken: params.refreshToken,
+          adGroupId: params.adGroupId
+        });
+        
+        // Apply new targeting criteria
+        await this.applyTargetingCriteria({
+          customerId: params.customerId,
+          refreshToken: params.refreshToken,
+          adGroupId: params.adGroupId,
+          targeting: params.targeting
+        });
+      }
+      
+      return {
+        id: params.adGroupId,
+        name: params.name,
+        status: params.status,
+      };
+    } catch (error) {
+      console.error('Error updating ad group:', error);
+      throw error;
+    }
+  }
+
+  public async updateAdGroupStatus(params: UpdateAdGroupStatusParams) {
+    try {
+      const client = await GoogleAdsClient.getInstance().getClient(params.refreshToken);
+      const customer = client.Customer({ 
+        customer_id: params.customerId,
+        refresh_token: params.refreshToken
+      });
+      
+      // Update status with minimal required fields
+      // Using as any to bypass the type checking since the actual API accepts these fields
+      const adGroup = {
+        resource_name: `customers/${params.customerId}/adGroups/${params.adGroupId}`,
+        status: params.status
+      } as any;
+      
+      await customer.adGroups.update([adGroup], {
+        update_mask: {
+          paths: ['status']
+        }
+      } as any);
+      
+      return {
+        id: params.adGroupId,
+        status: params.status,
+      };
+    } catch (error) {
+      console.error('Error updating ad group status:', error);
+      throw error;
+    }
+  }
+
+  private async applyTargetingCriteria({ customerId, refreshToken, adGroupId, targeting }: { 
+    customerId: string, 
+    refreshToken: string,
+    adGroupId: string, 
+    targeting: CreateAdGroupParams['targeting'] 
+  }) {
+    // Implementation would handle applying all targeting criteria types:
+    // - Location targeting
+    // - Language targeting
+    // - Demographic targeting
+    // - Interest targeting
+    // - Keyword targeting
+    
+    // This is a placeholder for the actual implementation
+    const client = await GoogleAdsClient.getInstance().getClient(customerId);
+    const customer = client.Customer({ 
+      customer_id: customerId,
+      refresh_token: refreshToken
+    });
+    
+    const operations: any[] = [];
+    
+    // Handle each targeting type...
+    // (Implementation details would go here)
+    
+    if (operations.length > 0) {
+      await customer.adGroupCriteria.create(operations);
+    }
+  }
+
+  private async removeTargetingCriteria({ customerId, refreshToken, adGroupId }: { 
+    customerId: string, 
+    refreshToken: string,
+    adGroupId: string 
+  }) {
+    // Implementation would remove existing targeting criteria
+    // This is a placeholder for the actual implementation
+    const client = await GoogleAdsClient.getInstance().getClient(customerId);
+    const customer = client.Customer({ 
+      customer_id: customerId,
+      refresh_token: refreshToken
+    });
+    
+    // Query existing criteria
+    const query = `
+      SELECT 
+        ad_group_criterion.criterion_id,
+        ad_group_criterion.type
+      FROM ad_group_criterion
+      WHERE ad_group_criterion.ad_group = 'customers/${customerId}/adGroups/${adGroupId}'
+    `;
+    
+    const response = await customer.query(query);
+    
+    // Remove all found criteria
+    const removeOperations = response.map((row: any) => 
+      `customers/${customerId}/adGroupCriteria/${adGroupId}_${row.ad_group_criterion.criterion_id}`
+    );
+    
+    if (removeOperations.length > 0) {
+      await customer.adGroupCriteria.remove(removeOperations);
+    }
   }
 } 

@@ -4,7 +4,28 @@ import { GOOGLE_ADS_CONFIG, GOOGLE_ADS_SCOPES } from '../constants/google-ads';
 
 export class GoogleAdsClient {
   private static instance: GoogleAdsClient;
-  private constructor() {}
+  private clientId: string;
+  private clientSecret: string;
+  private redirectUri: string;
+  private developerToken: string;
+  private oauth2Client: OAuth2Client;
+
+  private constructor() {
+    this.clientId = process.env.GOOGLE_CLIENT_ID || '';
+    this.clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+    this.redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google-ads/callback`;
+    this.developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '';
+
+    if (!this.clientId || !this.clientSecret || !this.developerToken) {
+      throw new Error('Missing Google Ads API credentials in environment variables');
+    }
+
+    this.oauth2Client = new OAuth2Client(
+      this.clientId,
+      this.clientSecret,
+      this.redirectUri
+    );
+  }
 
   public static getInstance(): GoogleAdsClient {
     if (!GoogleAdsClient.instance) {
@@ -14,23 +35,15 @@ export class GoogleAdsClient {
   }
 
   public getOAuth2Client(): OAuth2Client {
-    const redirectUri = process.env.NODE_ENV === 'production' 
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google-ads/callback`
-      : 'http://localhost:3000/api/auth/google-ads/callback';
-      
-    return new OAuth2Client({
-      clientId: GOOGLE_ADS_CONFIG.client_id,
-      clientSecret: GOOGLE_ADS_CONFIG.client_secret,
-      redirectUri: redirectUri,
-    });
+    return this.oauth2Client;
   }
 
-  public getAuthUrl(): string {
-    const oauth2Client = this.getOAuth2Client();
-    return oauth2Client.generateAuthUrl({
+  public getAuthUrl(state?: string): string {
+    return this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
-      scope: GOOGLE_ADS_SCOPES,
+      scope: ['https://www.googleapis.com/auth/adwords'],
       prompt: 'consent',
+      state: state,
     });
   }
 
@@ -41,9 +54,9 @@ export class GoogleAdsClient {
     });
 
     return new GoogleAdsApi({
-      client_id: GOOGLE_ADS_CONFIG.client_id!,
-      client_secret: GOOGLE_ADS_CONFIG.client_secret!,
-      developer_token: GOOGLE_ADS_CONFIG.developer_token!,
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      developer_token: this.developerToken,
     });
   }
 
@@ -65,31 +78,65 @@ export class GoogleAdsClient {
   }
 
   public async getCustomerId(accessToken: string): Promise<string> {
-    try {
-      const oauth2Client = this.getOAuth2Client();
-      oauth2Client.setCredentials({ access_token: accessToken });
-      
-      interface CustomerResponse {
-        resourceNames: string[];
-      }
-      
-      const response = await oauth2Client.request<CustomerResponse>({
-        url: 'https://googleads.googleapis.com/v16/customers:listAccessibleCustomers',
-        method: 'GET',
-        headers: {
-          'developer-token': GOOGLE_ADS_CONFIG.developer_token
-        }
-      });
-      
-      if (response.data?.resourceNames?.length > 0) {
-        const customerResourceName = response.data.resourceNames[0];
-        return customerResourceName.split('/')[1];
-      }
-      
-      return `temp_${Date.now()}`;
-    } catch (error) {
-      console.error('Error retrieving Google Ads customer ID:', error);
-      return `temp_${Date.now()}`;
+    const accessibleCustomers = await this.listAccessibleCustomers(accessToken);
+    if (!accessibleCustomers || accessibleCustomers.length === 0) {
+        throw new Error('No accessible Google Ads customer accounts found.');
     }
+    const customerId = accessibleCustomers[0].split('/')[1];
+    return customerId;
+  }
+
+  public async listAccessibleCustomers(accessToken: string): Promise<string[]> {
+    const url = 'https://googleads.googleapis.com/v16/customers:listAccessibleCustomers';
+    const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'developer-token': this.developerToken,
+    };
+
+    const response = await fetch(url, { method: 'GET', headers });
+    if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Failed to list accessible customers: ${response.status} ${errorData}`);
+    }
+    const data = await response.json();
+    return data.resourceNames || [];
+  }
+
+  public async getCustomerDetails(customerId: string, accessToken: string): Promise<{ descriptiveName?: string, [key: string]: any } | null> {
+    const loginCustomerId = this.getLoginCustomerId();
+    const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'developer-token': this.developerToken,
+        'login-customer-id': loginCustomerId || customerId,
+    };
+    const query = `SELECT customer.descriptive_name, customer.id FROM customer WHERE customer.id = '${customerId}'`;
+    const url = `https://googleads.googleapis.com/v16/customers/${customerId}/googleAds:searchStream`;
+
+    const body = JSON.stringify({ query });
+
+    try {
+        const response = await fetch(url, { 
+            method: 'POST', 
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body 
+        });
+        if (!response.ok) {
+            const errorData = await response.text();
+            console.error(`Failed to fetch customer details for ${customerId}: ${response.status} ${errorData}`);
+            return null;
+        }
+        const results = await response.json();
+        if (results && results.length > 0 && results[0].results && results[0].results.length > 0) {
+            return results[0].results[0].customer;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching customer details:", error);
+        return null;
+    }
+  }
+
+  public getLoginCustomerId(): string | undefined {
+    return undefined;
   }
 } 

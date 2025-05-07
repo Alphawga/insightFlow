@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-  import { trpc } from '@/app/_providers/trpc-provider';
+import { trpc } from '@/app/_providers/trpc-provider';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
 interface WorkspaceFormProps {
-  onComplete: () => void;
+  onComplete: (workspaceId: string) => void;
 }
 
 export function WorkspaceForm({ onComplete }: WorkspaceFormProps) {
@@ -18,7 +18,7 @@ export function WorkspaceForm({ onComplete }: WorkspaceFormProps) {
     onSuccess: (workspace) => {
       // Store workspace ID for Google Ads connection
       localStorage.setItem('onboarding_workspace_id', workspace.id);
-      onComplete();
+      onComplete(workspace.id);
     },
     onError: (error) => {
       setError(error.message);

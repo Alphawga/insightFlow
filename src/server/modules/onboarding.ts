@@ -1,70 +1,103 @@
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { publicProcedure } from '../trpc';
-import { ONBOARDING_STEPS } from '@/lib/constants';
+import { publicProcedure, protectedProcedure } from '@/server/trpc';
+import { TRPCError } from '@trpc/server';
+import { db } from '@/lib/db';
 
+export const getOnboardingStatus = protectedProcedure.query(async ({ ctx }) => {
+  const userId = ctx.session.user.id;
 
-export const getOnboardingStatus = publicProcedure
-  .query(async ({ ctx }) => {
-    const userId = ctx.session?.user?.id;
-    console.log('userId:', userId);
-    if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
-    
-    const steps = await ctx.db.onboardingProgress.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-    });
-    console.log('steps:', steps);
-    
-    const isComplete = ONBOARDING_STEPS.every(step => 
-      steps.some(s => s.step === step && s.completed)
-    );
-    
-
-    let currentStep = ONBOARDING_STEPS[0]; 
-    if (steps.length > 0) {
-      const incompleteStep = steps.find(s => !s.completed);
-      if (incompleteStep) {
-        currentStep = incompleteStep.step;
-      } else if (isComplete) {
-        currentStep = ONBOARDING_STEPS[ONBOARDING_STEPS.length - 1]; // Last step (complete)
-      }
-    }
-    
-    console.log('currentStep:', currentStep);
-    return { 
-      steps,
-      isComplete,
-      currentStep
-    };
-  });
-
-export const updateOnboardingProgress = publicProcedure
-  .input(z.object({
-    step: z.string(),
-    completed: z.boolean().default(true),
-  }))
-  .mutation(async ({ ctx, input }) => {
-    const userId = ctx.session?.user?.id;
-    if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
- 
-    
-    const progress = await ctx.db.onboardingProgress.upsert({
-      where: { 
-        userId_step: { userId, step: input.step } 
-      },
-      update: {
-        completed: input.completed,
-        completedAt: input.completed ? new Date() : null,
-      },
-      create: {
+  try {
+    const steps = await db.onboardingProgress.findMany({
+      where: {
         userId,
-        step: input.step,
-        completed: input.completed,
-        completedAt: input.completed ? new Date() : null,
+      },
+      orderBy: {
+        createdAt: 'asc',
       },
     });
 
-    
-    return progress;
+    if (steps.length === 0) {
+      // User hasn't started onboarding yet, create initial step
+      await db.onboardingProgress.create({
+        data: {
+          userId,
+          step: 'welcome',
+          completed: false,
+        },
+      });
+
+      return {
+        currentStep: 'welcome',
+        steps: [{
+          step: 'welcome',
+          completed: false,
+        }],
+      };
+    }
+
+    // Find the first incomplete step, or the last step if all are complete
+    const currentStep = steps.find((step) => !step.completed) || steps[steps.length - 1];
+
+    return {
+      currentStep: currentStep.step,
+      steps,
+      isComplete: steps.every((step) => step.completed),
+    };
+  } catch (error) {
+    console.error('Error getting onboarding status:', error);
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Failed to get onboarding status',
+    });
+  }
+});
+
+export const updateOnboardingProgress = protectedProcedure
+  .input(
+    z.object({
+      step: z.string(),
+      completed: z.boolean(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const userId = ctx.session.user.id;
+    const { step, completed } = input;
+
+    try {
+      const existingStep = await db.onboardingProgress.findFirst({
+        where: {
+          userId,
+          step,
+        },
+      });
+
+      if (existingStep) {
+        // Update existing step
+        return await db.onboardingProgress.update({
+          where: {
+            id: existingStep.id,
+          },
+          data: {
+            completed,
+            completedAt: completed ? new Date() : null,
+          },
+        });
+      }
+
+      // Create new step
+      return await db.onboardingProgress.create({
+        data: {
+          userId,
+          step,
+          completed,
+          completedAt: completed ? new Date() : null,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating onboarding progress:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to update onboarding progress',
+      });
+    }
   }); 

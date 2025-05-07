@@ -111,7 +111,7 @@ export const getDashboardMetrics = publicProcedure
     previousStartDate.setTime(previousStartDate.getTime() - previousPeriodLength);
     previousEndDate.setTime(previousEndDate.getTime() - previousPeriodLength);
 
-    const previousMetrics = await db.metric.groupBy({
+    const previousMetrics = await db.adMetrics.groupBy({
       by: ['campaignId'],
       where: {
         campaign: {

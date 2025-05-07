@@ -41,7 +41,7 @@ export const getUserWorkspace = publicProcedure.query(async ({ ctx }) => {
     include: {
       workspace: {
         include: {
-          adAccounts: true,
+          integrationAccounts: true,
         },
       },
     },

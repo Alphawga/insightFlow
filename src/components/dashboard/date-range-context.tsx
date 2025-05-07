@@ -1,24 +1,34 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { DateRange } from './date-range-selector';
+"use client"
 
-interface DateRangeContextType {
-  dateRange: DateRange;
-  setDateRange: (range: DateRange) => void;
+import React, { createContext, useState, ReactNode, useContext } from 'react'
+import { subDays } from 'date-fns'
+
+interface DateRange {
+  from: Date | undefined
+  to: Date | undefined
 }
 
-const DateRangeContext = createContext<DateRangeContextType | undefined>(undefined);
+interface DateRangeContextType {
+  dateRange: DateRange
+  setDateRange: (range: DateRange) => void
+}
+
+export const DateRangeContext = createContext<DateRangeContextType>({
+  dateRange: { from: undefined, to: undefined },
+  setDateRange: () => {},
+})
 
 export function DateRangeProvider({ children }: { children: ReactNode }) {
   const [dateRange, setDateRange] = useState<DateRange>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    from: subDays(new Date(), 30),
     to: new Date(),
-  });
+  })
 
   return (
     <DateRangeContext.Provider value={{ dateRange, setDateRange }}>
       {children}
     </DateRangeContext.Provider>
-  );
+  )
 }
 
 export function useDateRange() {

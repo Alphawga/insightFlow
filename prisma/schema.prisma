@@ -59,7 +59,7 @@ model Workspace {
   id          String    @id @default(cuid())
   name        String
   users       UserWorkspace[]
-  adAccounts  AdAccount[]
+  integrationAccounts IntegrationAccount[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -77,46 +77,53 @@ model UserWorkspace {
   @@unique([userId, workspaceId])
 }
 
-model AdAccount {
+model IntegrationAccount {
   id          String    @id @default(cuid())
   workspaceId String
-  platform    String    // GOOGLE_ADS, FACEBOOK_ADS, etc.
-  accountId   String    // External platform account ID
+  platform    String    // GOOGLE_ADS, SHOPIFY, STRIPE, GA4, META_ADS, MAILCHIMP, etc.
+  accountId   String    // External platform account ID (e.g., Shop name, Property ID, Ad Account ID)
   name        String
-  status      String    // ACTIVE, DISCONNECTED
-  credentials Json?     // Encrypted credentials
+  status      String    // ACTIVE, DISCONNECTED, ERROR, NEEDS_REAUTH
+  credentials Json?     // Encrypted credentials (OAuth tokens, API Keys, secrets, etc.)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  // New fields for Google Ads
-  customerName String?  // Google Ads customer name
-  developerToken String? // Google Ads developer token
-  loginCustomerId String? // Manager account ID if applicable
-  refreshToken String? @db.Text // OAuth refresh token
+
+  // Google Ads specific fields (make optional)
+  customerName    String?     @map("customer_name") // Optional: Google Ads customer name
+  developerToken  String?     @map("developer_token") // Optional: Google Ads developer token
+  loginCustomerId String?     @map("login_customer_id") // Optional: Manager account ID if applicable
+
+  // Relations primarily for Ads platforms (conditionally used in application logic)
   conversionActions ConversionAction[]
-  campaigns Campaign[]
-  metrics AdMetrics[]
-  alerts Alert[]
-  lastSyncedAt DateTime?
-  syncStatus String? // SYNCING, SUCCESS, ERROR
-  syncError String? @db.Text
-  
+  campaigns       Campaign[]
+  metrics         AdMetrics[] // Still named AdMetrics, only relevant for Ads platforms
+  alerts          Alert[]
+
+  // Generic Sync Status
+  lastSyncedAt DateTime? @map("last_synced_at")
+  syncStatus   String?   @map("sync_status") // SYNCING, SUCCESS, ERROR
+  syncError    String?   @map("sync_error") @db.Text
+
   @@unique([platform, accountId])
+  @@map("integration_accounts") // Renamed the underlying table
 }
 
+// ConversionAction now relates to IntegrationAccount
 model ConversionAction {
-  id            String    @id @default(cuid())
-  adAccountId   String
-  adAccount     AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
-  externalId    String    // ID from Google Ads
-  name          String
-  category      String    // PURCHASE, SIGNUP, etc.
-  status        String    // ENABLED, DISABLED
-  isPrimary     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String             @id @default(cuid())
+  integrationAccountId String             @map("integration_account_id")
+  integrationAccount IntegrationAccount @relation(fields: [integrationAccountId], references: [id], onDelete: Cascade)
+  externalId         String             @map("external_id") // ID from Google Ads
+  name               String
+  category           String             // PURCHASE, SIGNUP, etc.
+  status             String             // ENABLED, DISABLED
+  isPrimary          Boolean            @default(false) @map("is_primary")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  @@unique([adAccountId, externalId])
+  @@unique([integrationAccountId, externalId])
+  @@map("conversion_actions")
 }
 
 model OnboardingProgress {
@@ -140,44 +147,51 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Campaign now relates to IntegrationAccount
 model Campaign {
-  id            String    @id @default(cuid())
-  adAccountId   String
-  adAccount     AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
-  externalId    String    // Google Ads Campaign ID
-  name          String
-  status        String    // ENABLED, PAUSED, REMOVED
-  budget        Float?
-  budgetType    String?   // DAILY, LIFETIME
-  startDate     DateTime?
-  endDate       DateTime?
-  metrics       AdMetrics[]
-  deviceMetrics DeviceMetrics[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String             @id @default(cuid())
+  integrationAccountId String             @map("integration_account_id")
+  integrationAccount IntegrationAccount @relation(fields: [integrationAccountId], references: [id], onDelete: Cascade)
+  externalId         String             @map("external_id") // Google Ads Campaign ID
+  name               String
+  status             String             // ENABLED, PAUSED, REMOVED
+  budget             Float?
+  budgetType         String?            @map("budget_type") // DAILY, LIFETIME
+  startDate          DateTime?          @map("start_date")
+  endDate            DateTime?          @map("end_date")
+  metrics            AdMetrics[]
+  deviceMetrics      DeviceMetrics[]
+  adGroups           AdGroup[]
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  @@unique([adAccountId, externalId])
+  @@unique([integrationAccountId, externalId])
+  @@map("campaigns")
 }
 
+// AdMetrics now relates to IntegrationAccount
 model AdMetrics {
-  id            String    @id @default(cuid())
-  adAccountId   String
-  campaignId    String?
-  date          DateTime
-  impressions   Int
-  clicks        Int
-  cost          Float
-  conversions   Int
-  conversionValue Float
-  ctr           Float    // Click-through rate
-  cpc           Float    // Cost per click
-  roas          Float    // Return on ad spend
-  adAccount     AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
-  campaign      Campaign? @relation(fields: [campaignId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String             @id @default(cuid())
+  integrationAccountId String             @map("integration_account_id")
+  campaignId         String?            @map("campaign_id")
+  adGroupId          String?            @map("ad_group_id")
+  date               DateTime
+  impressions        Int
+  clicks             Int
+  cost               Float
+  conversions        Int
+  conversionValue    Float              @map("conversion_value")
+  ctr                Float              // Click-through rate
+  cpc                Float              // Cost per click
+  roas               Float              // Return on ad spend
+  integrationAccount IntegrationAccount @relation(fields: [integrationAccountId], references: [id], onDelete: Cascade)
+  campaign           Campaign?          @relation(fields: [campaignId], references: [id])
+  adGroup            AdGroup?           @relation(fields: [adGroupId], references: [id])
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  @@unique([adAccountId, campaignId, date])
+  @@unique([integrationAccountId, campaignId, adGroupId, date])
+  @@map("ad_metrics")
 }
 
 model DeviceMetrics {
@@ -197,17 +211,36 @@ model DeviceMetrics {
   @@unique([campaignId, date, device])
 }
 
+// Alert now relates to IntegrationAccount
 model Alert {
-  id            String    @id @default(cuid())
-  adAccountId   String
-  adAccount     AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
-  metric        String    // CTR, CPC, ROAS, etc.
-  condition     String    // LESS_THAN, GREATER_THAN, etc.
-  threshold     Float
-  enabled       Boolean   @default(true)
-  emailEnabled  Boolean   @default(true)
-  lastTriggered DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String             @id @default(cuid())
+  integrationAccountId String             @map("integration_account_id")
+  integrationAccount IntegrationAccount @relation(fields: [integrationAccountId], references: [id], onDelete: Cascade)
+  metric             String             // CTR, CPC, ROAS, etc.
+  condition          String             // LESS_THAN, GREATER_THAN, etc.
+  threshold          Float
+  enabled            Boolean            @default(true)
+  emailEnabled       Boolean            @default(true) @map("email_enabled")
+  lastTriggered      DateTime?          @map("last_triggered")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  @@map("alerts")
 }
 
+model AdGroup {
+  id              String    @id @default(cuid())
+  name            String
+  status          String    // ENABLED, PAUSED
+  cpcBid          Float
+  targeting       Json?     // Store targeting as JSON
+  description     String?
+  platformAdGroupId String  // ID from Google Ads
+  campaignId      String
+  campaign        Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  metrics         AdMetrics[] // Add this line to establish the relation
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([platformAdGroupId, campaignId])
+}

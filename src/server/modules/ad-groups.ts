@@ -101,11 +101,12 @@ export const createAdGroup = publicProcedure
     }
 
     // Create ad group in Google Ads
-    const googleAdsService = new GoogleAdsService(campaign.adAccount.refreshToken);
+    const googleAdsService = GoogleAdsService.getInstance();
     const googleAdsAdGroup = await googleAdsService.createAdGroup({
       ...input,
-      customerId: campaign.adAccount.platformAccountId,
-      campaignId: campaign.platformCampaignId,
+      customerId: campaign.adAccount.accountId,
+      campaignId: campaign.externalId,
+      refreshToken: campaign.adAccount.refreshToken || '',
     });
 
     // Create ad group in database
@@ -148,12 +149,13 @@ export const updateAdGroup = publicProcedure
     }
 
     // Update ad group in Google Ads
-    const googleAdsService = new GoogleAdsService(adGroup.campaign.adAccount.refreshToken);
+    const googleAdsService = GoogleAdsService.getInstance();
     await googleAdsService.updateAdGroup({
       ...input,
-      customerId: adGroup.campaign.adAccount.platformAccountId,
-      campaignId: adGroup.campaign.platformCampaignId,
+      customerId: adGroup.campaign.adAccount.accountId,
+      campaignId: adGroup.campaign.externalId,
       adGroupId: adGroup.platformAdGroupId,
+      refreshToken: adGroup.campaign.adAccount.refreshToken || '',
     });
 
     // Update ad group in database
@@ -202,12 +204,13 @@ export const updateAdGroupStatus = publicProcedure
     }
 
     // Update ad group status in Google Ads
-    const googleAdsService = new GoogleAdsService(adGroup.campaign.adAccount.refreshToken);
+    const googleAdsService = GoogleAdsService.getInstance();
     await googleAdsService.updateAdGroupStatus({
-      customerId: adGroup.campaign.adAccount.platformAccountId,
-      campaignId: adGroup.campaign.platformCampaignId,
+      customerId: adGroup.campaign.adAccount.accountId,
+      campaignId: adGroup.campaign.externalId,
       adGroupId: adGroup.platformAdGroupId,
       status: input.status,
+      refreshToken: adGroup.campaign.adAccount.refreshToken || '',
     });
 
     // Update ad group status in database

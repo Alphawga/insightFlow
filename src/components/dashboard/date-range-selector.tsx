@@ -1,101 +1,119 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+"use client"
+
+import { CalendarIcon } from "@radix-ui/react-icons"
+import { format, subDays } from "date-fns"
+import { useContext, useState } from "react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Icons } from '@/components/icons';
-import { format } from 'date-fns';
+} from "@/components/ui/popover"
+import { DateRangeContext } from "./date-range-context"
 
-export interface DateRange {
-  from: Date;
-  to: Date;
+export interface DateRangeSelectorProps {
+  onDateRangeChange?: (startDate: Date, endDate: Date) => void;
 }
 
-interface DateRangeSelectorProps {
-  onChange: (range: DateRange) => void;
-}
+export function DateRangeSelector({ onDateRangeChange }: DateRangeSelectorProps) {
+  const { dateRange, setDateRange } = useContext(DateRangeContext)
+  const [date, setDate] = useState<Date>()
 
-const PRESET_RANGES = [
-  { label: 'Last 7 Days', days: 7 },
-  { label: 'Last 30 Days', days: 30 },
-  { label: 'Last 90 Days', days: 90 },
-];
-
-export function DateRangeSelector({ onChange }: DateRangeSelectorProps) {
-  const [date, setDate] = useState<DateRange>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date(),
-  });
-
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handlePresetClick = (days: number) => {
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - days);
-    
-    const newRange = { from, to };
-    setDate(newRange);
-    onChange(newRange);
-    setIsOpen(false);
-  };
-
-  const handleSelect = (range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
-      setDate(range);
-      onChange(range);
+  // Preset date ranges
+  const selectLast7Days = () => {
+    const end = new Date()
+    const start = subDays(end, 7)
+    setDateRange({ from: start, to: end })
+    if (onDateRangeChange) {
+      onDateRangeChange(start, end)
     }
-  };
+  }
+
+  const selectLast30Days = () => {
+    const end = new Date()
+    const start = subDays(end, 30)
+    setDateRange({ from: start, to: end })
+    if (onDateRangeChange) {
+      onDateRangeChange(start, end)
+    }
+  }
+
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    setDate(selectedDate)
+    
+    if (selectedDate) {
+      if (!dateRange.from) {
+        setDateRange({ from: selectedDate, to: undefined })
+      } else if (!dateRange.to && selectedDate >= dateRange.from) {
+        setDateRange({ from: dateRange.from, to: selectedDate });
+        if (onDateRangeChange) {
+          onDateRangeChange(dateRange.from, selectedDate)
+        }
+      } else {
+        setDateRange({ from: selectedDate, to: undefined })
+      }
+    }
+  }
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="justify-start text-left font-normal"
-        >
-          <Icons.calendar className="mr-2 h-4 w-4" />
-          {date?.from ? (
-            date.to ? (
-              <>
-                {format(date.from, "LLL dd, y")} -{" "}
-                {format(date.to, "LLL dd, y")}
-              </>
+    <div className="flex items-center space-x-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            id="date"
+            variant={"outline"}
+            size="sm"
+            className={cn(
+              "w-[240px] justify-start text-left font-normal",
+              !dateRange && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dateRange.from ? (
+              dateRange.to ? (
+                <>
+                  {format(dateRange.from, "LLL dd, y")} -{" "}
+                  {format(dateRange.to, "LLL dd, y")}
+                </>
+              ) : (
+                format(dateRange.from, "LLL dd, y")
+              )
             ) : (
-              format(date.from, "LLL dd, y")
-            )
-          ) : (
-            <span>Pick a date</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <div className="space-y-2 p-2">
-          {PRESET_RANGES.map((range) => (
-            <Button
-              key={range.days}
-              variant="ghost"
-              className="w-full justify-start font-normal"
-              onClick={() => handlePresetClick(range.days)}
-            >
-              {range.label}
+              <span>Pick a date</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <div className="px-4 pt-3 flex justify-between">
+            <Button variant="outline" size="sm" onClick={selectLast7Days}>
+              Last 7 days
             </Button>
-          ))}
-        </div>
-        <div className="border-t p-2">
+            <Button variant="outline" size="sm" onClick={selectLast30Days}>
+              Last 30 days
+            </Button>
+          </div>
           <Calendar
-            initialFocus
             mode="range"
-            defaultMonth={date?.from}
-            selected={date}
-            onSelect={handleSelect}
+            defaultMonth={dateRange.from}
+            selected={{
+              from: dateRange.from || undefined,
+              to: dateRange.to || undefined,
+            }}
+            onSelect={(range) => {
+              setDateRange({ 
+                from: range?.from || dateRange.from, 
+                to: range?.to || dateRange.to 
+              });
+              if (range?.from && range?.to && onDateRangeChange) {
+                onDateRangeChange(range.from, range.to);
+              }
+            }}
             numberOfMonths={2}
           />
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
 } 

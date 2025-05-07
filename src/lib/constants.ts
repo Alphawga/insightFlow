@@ -1,9 +1,10 @@
 // Onboarding Steps
 export const ONBOARDING_STEPS = [
     'welcome',
-    'workspace',
-    'connect-ads',
-    'conversion',
+    'workspace_setup',
+    'business_type',
+    'goals',
+    'connect_sources',
     'tutorial',
     'complete',
   ];

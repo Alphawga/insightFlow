@@ -69,8 +69,8 @@ export function CampaignBreakdown() {
     {
       workspaceId: userWorkspace?.workspace.id!,
       dateRange: {
-        startDate: dateRange.from,
-        endDate: dateRange.to,
+        startDate: dateRange.from || new Date(),
+        endDate: dateRange.to || new Date(),
       },
     },
     {
@@ -117,7 +117,7 @@ export function CampaignBreakdown() {
                 <TableRow key={campaign.id}>
                   <TableCell className="font-medium">{campaign.name}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={statusColors[campaign.status]}>
+                    <Badge variant="secondary" className={statusColors[campaign.status as keyof typeof statusColors]}>
                       {campaign.status.toLowerCase()}
                     </Badge>
                   </TableCell>

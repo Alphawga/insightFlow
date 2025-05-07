@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-  import { useSession } from 'next-auth/react';
-  import { trpc } from '@/app/_providers/trpc-provider';
+import { useSession } from 'next-auth/react';
+import { trpc } from '@/app/_providers/trpc-provider';
 
 interface OnboardingCheckProps {
   children: React.ReactNode;
@@ -23,7 +23,7 @@ export function OnboardingCheck({ children }: OnboardingCheckProps) {
   );
 
   useEffect(() => {
-   
+   console.log("onboardingStatus", onboardingStatus);
     if (
       status === 'authenticated' && 
       !isLoading && 
